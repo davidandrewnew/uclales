@@ -62,6 +62,7 @@ contains
     integer :: i, j, iterate 
     real :: zs, bflx, ffact, sst1, bflx1, Vbulk, Vzt, usum
     real (kind=8) :: bfl(2), bfg(2)
+    real :: exner ! for isfctyp=4 (DAN)
 
     real :: dtdz(nxp,nyp), drdz(nxp,nyp), usfc(nxp,nyp), vsfc(nxp,nyp) &
             ,wspd(nxp,nyp), bfct(nxp,nyp), mnflx(5), flxarr(5,nxp,nyp)
@@ -191,6 +192,8 @@ contains
        Vzt   = 10.* (log(zt(2)/zrough)/log(10./zrough))
        Vbulk = Vzt * (vonk/log(zt(2)/zrough))**2
 
+       exner = (psrf / p00)**rcp ! Must use potential temperature at surface for flux calculations (DAN)
+
        bfl(:) = 0.
        do j=3,nyp-2
          do i=3,nxp-2
@@ -205,17 +208,25 @@ contains
        bfg(1) = bfg(1)/real((nxpg-4)*(nypg-4))
 
        do iterate=1,5
-         bflx  = ((sst -bfg(1)) + bfg(1)*ep2*(rslf(psrf,sst) -bfg(2))) &
-               * 0.5*(dn0(1)+dn0(2))*cp*Vbulk
+! DAN
+!         bflx  = ((sst -bfg(1)) + bfg(1)*ep2*(rslf(psrf,sst) -bfg(2))) &
+!               * 0.5*(dn0(1)+dn0(2))*cp*Vbulk
+         bflx  = ((sst/exner -bfg(1)) + bfg(1)*ep2*(rslf(psrf,sst) -bfg(2))) & ! DAN
+               * 0.5*(dn0(1)+dn0(2))*cp*Vbulk                                  ! DAN
          sst1 = sst + 0.1
-         bflx1 = ((sst1-bfg(1)) + bfg(1)*ep2*(rslf(psrf,sst1)-bfg(2))) &
-               * 0.5*(dn0(1)+dn0(2))*cp*Vbulk
+! DAN
+!         bflx1 = ((sst1-bfg(1)) + bfg(1)*ep2*(rslf(psrf,sst1)-bfg(2))) &
+!               * 0.5*(dn0(1)+dn0(2))*cp*Vbulk
+         bflx1 = ((sst1/exner-bfg(1)) + bfg(1)*ep2*(rslf(psrf,sst1)-bfg(2))) & ! DAN
+               * 0.5*(dn0(1)+dn0(2))*cp*Vbulk                                  ! DAN
          sst  = sst + 0.1* (dthcon - bflx) / (bflx1-bflx)
        end do
 
        do j=3,nyp-2
          do i=3,nxp-2
-           wt_sfc(i,j) = Vbulk * (sst -a_theta(2,i,j))
+! DAN
+!           wt_sfc(i,j) = Vbulk * (sst -a_theta(2,i,j))
+           wt_sfc(i,j) = Vbulk * (sst/exner -a_theta(2,i,j)) ! DAN
            wq_sfc(i,j) = Vbulk * (rslf(psrf,sst) - vapor(2,i,j))
            wspd(i,j)    = max(0.1,                                    &
                           sqrt((a_up(2,i,j)+umean)**2+(a_vp(2,i,j)+vmean)**2))

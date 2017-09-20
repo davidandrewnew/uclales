@@ -96,12 +96,7 @@ contains
        call mpi_get_time(t1)
        istp = istp + 1
 
-       call stathandling
-       if(myid .eq. 0 .and. statflg) print*,'     sampling stat at t=',time+dt
-
-       call t_step
-       time = time + dt
-
+       ! Repositioned CFL checking to avoid too long of time step on initial time step (DAN) 
        call cfl(cflmax)
        call double_scalar_par_max(cflmax,gcflmax)
        cflmax = gcflmax
@@ -110,6 +105,22 @@ contains
        pecletmax = gpecletmax
        dt_prev = dt
        dt = min(dtlong,dt*peak_cfl/(cflmax+epsilon(1.)))
+
+       call stathandling
+       if(myid .eq. 0 .and. statflg) print*,'     sampling stat at t=',time+dt
+
+       call t_step
+       time = time + dt
+
+! DAN
+!!$       call cfl(cflmax)
+!!$       call double_scalar_par_max(cflmax,gcflmax)
+!!$       cflmax = gcflmax
+!!$       call peclet(pecletmax)
+!!$       call double_scalar_par_max(pecletmax,gpecletmax)
+!!$       pecletmax = gpecletmax
+!!$       dt_prev = dt
+!!$       dt = min(dtlong,dt*peak_cfl/(cflmax+epsilon(1.)))
 
        !
        ! output control
@@ -752,10 +763,12 @@ contains
     use grid, only : u0, v0, a_up, a_vp, a_wp, a_tp, a_ut, a_vt, a_wt, a_tt,&
          nfpt, spngt, spngm, nzp, nxp, nyp, th0, th00, lspongeinit
     use mpi_interface, only : double_array_par_sum,nxpg,nypg
+    use grid, only : level, rt0, a_rp, a_rt ! DAN
 
     integer :: i, j, k, kk
     real :: tbarg(nfpt),tbarl(nfpt),ubarg(nfpt),ubarl(nfpt),vbarg(nfpt),vbarl(nfpt)
     real :: ngrid  
+    real :: rbarg(nfpt), rbarl(nfpt) ! DAN
 
     if (maxval(spngt) > epsilon(1.) .and. nfpt > 1) then
 
@@ -768,6 +781,7 @@ contains
                   a_ut(k,i,j)=a_ut(k,i,j)-spngt(kk)*(a_up(k,i,j)-u0(k))
                   a_vt(k,i,j)=a_vt(k,i,j)-spngt(kk)*(a_vp(k,i,j)-v0(k))
                   a_wt(k,i,j)=a_wt(k,i,j)-spngm(kk)*(a_wp(k,i,j))
+                  if (level >= 1) a_rt(k,i,j) = a_rt(k,i,j) - spngt(kk)*(a_rp(k,i,j) - rt0(k)) ! Damp humidity also (DAN)
                end do
             end do
          end do
@@ -779,17 +793,20 @@ contains
            tbarl(kk) = sum(a_tp(k,3:nxp-2,3:nyp-2)) 
            ubarl(kk) = sum(a_up(k,3:nxp-2,3:nyp-2))
            vbarl(kk) = sum(a_vp(k,3:nxp-2,3:nyp-2))
+           if (level >= 1) rbarl(kk) = sum(a_rp(k,3:nxp-2,3:nyp-2)) ! DAN
          end do
 
          call double_array_par_sum(tbarl,tbarg,nfpt)
          call double_array_par_sum(ubarl,ubarg,nfpt)
          call double_array_par_sum(vbarl,vbarg,nfpt)
+         if (level >= 1) call double_array_par_sum(rbarl, rbarg, nfpt) ! DAN
 
          ngrid = (nxpg-4)*(nypg-4)
          do k = 1,nfpt
            tbarg(k) = tbarg(k) / ngrid 
            ubarg(k) = ubarg(k) / ngrid
            vbarg(k) = vbarg(k) / ngrid
+           if (level >= 1) rbarg(k) = rbarg(k)/ngrid  ! DAN
          end do
 
          do j=3,nyp-2
@@ -800,6 +817,7 @@ contains
                   a_ut(k,i,j)=a_ut(k,i,j)-spngt(kk)*(a_up(k,i,j)-ubarg(kk))
                   a_vt(k,i,j)=a_vt(k,i,j)-spngt(kk)*(a_vp(k,i,j)-vbarg(kk))
                   a_wt(k,i,j)=a_wt(k,i,j)-spngm(kk)*(a_wp(k,i,j))
+                  if (level >= 1) a_rt(k,i,j) = a_rt(k,i,j) - spngt(kk)*(a_rp(k,i,j) - rt0(k)) ! Damp humidity also (DAN)
                end do
             end do
          end do

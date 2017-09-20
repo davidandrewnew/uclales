@@ -711,6 +711,7 @@ contains
        do j=3,n3-2
           do i=3,n2-2
              fld(k,i,j) = fld(k,i,j) + rand(i,j)*xmag(k)
+             xx = xx + rand(i,j)*xmag(k) ! Needed to compute horizontal mean (DAN)
           end do
        end do
 
