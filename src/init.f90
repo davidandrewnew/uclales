@@ -62,6 +62,8 @@ contains
     use grid, only : nzp, dn0, u0, v0, zm, zt, isfctyp
     use modparticles, only: init_particles, lpartic, lpartdump, lpartstat, initparticledump, initparticlestat, write_particle_hist, particlestat
 
+    use netcdf_interface, only : init_netcdf_interface ! DAN
+
     implicit none
 
     real ::   &
@@ -118,6 +120,9 @@ contains
      if (lstendflg) then
        call lstend_init
      end if
+
+     ! Initialize NetCDF interface (DAN)
+     call init_netcdf_interface
 
     if (lpartic) then
       if(runtype == 'INITIAL') then
