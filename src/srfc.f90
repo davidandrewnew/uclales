@@ -51,7 +51,8 @@ contains
          uw_sfc, vw_sfc, ww_sfc, wt_sfc, wq_sfc, nstep, a_tskin, a_qskin,  &
          isfctyp, a_phiw, a_tsoil, a_Wl, obl
     use thrm, only: rslf
-    use stat, only: sfc_stat, sflg
+! Disabling old statisitcs interface (DAN)
+!    use stat, only: sfc_stat, sflg
     use util, only : get_avg3
     use mpi_interface, only : nypg, nxpg, double_array_par_sum
     use mpi_interface, only: myid
@@ -374,7 +375,8 @@ contains
 
     end select
 
-    if (sflg) call sfc_stat(nxp,nyp,wt_sfc,wq_sfc,a_ustar,sst)
+! Disabling old statisitcs interface (DAN)
+!    if (sflg) call sfc_stat(nxp,nyp,wt_sfc,wq_sfc,a_ustar,sst)
 
     return
 

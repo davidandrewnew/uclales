@@ -50,7 +50,8 @@ contains
 ! LINDA, b
     lanom
 !LINDA, e
-    use stat, only : init_stat, write_ps, statistics
+! Disable old statistic interace (DAN)
+!    use stat, only : init_stat, write_ps, statistics
     use grid, only : isfctyp,level
     use mpi_interface, only : appl_abort, myid
     use thrm, only : thermo
@@ -110,7 +111,8 @@ contains
 
     call initmcrp(level)
 
-    call init_stat(time+dt,filprf,expnme,nzp)
+    ! Disable old statistic interace (DAN)
+!    call init_stat(time+dt,filprf,expnme,nzp)
     !
     !irina
        if (lsvarflg) then
@@ -145,8 +147,9 @@ contains
           call write_anal(time)
           call initcross(time, filprf)
           call triggercross(time)
-          call statistics (time)
-          call write_ps(nzp,dn0,u0,v0,zm,zt,time)
+          ! Disable old statistic interace (DAN)
+          !call statistics (time)
+          !call write_ps(nzp,dn0,u0,v0,zm,zt,time)
           if(lpartic) call particlestat(.false.,time)
           if(lpartic) call particlestat(.true.,time)
        else

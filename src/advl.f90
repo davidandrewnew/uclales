@@ -36,7 +36,8 @@ contains
 
     use grid, only : a_ut, a_vt, a_wt, a_scr1, a_scr2, a_up,a_vp,a_wp,      &
          nxp, nyp, nzp, dzi_t, dzi_m, dxi, dyi, dn0
-    use stat, only : sflg, updtst, acc_tend
+! Disabling old statisitcs interface (DAN)
+!    use stat, only : sflg, updtst, acc_tend
     use util, only : get_avg3
 
     real, allocatable ::  dzmri(:), dztri(:)
@@ -50,8 +51,9 @@ contains
         return
     endif
 
-    if (sflg) call acc_tend(nzp,nxp,nyp,a_up,a_vp,a_wp,a_ut,a_vt,a_wt,        &
-         v1,v2,v3,1,'adv')
+! Disabling old statisitcs interface (DAN)
+!    if (sflg) call acc_tend(nzp,nxp,nyp,a_up,a_vp,a_wp,a_ut,a_vt,a_wt,        &
+!         v1,v2,v3,1,'adv')
 
     !
     ! prepare density weights for use vertical advection
@@ -72,10 +74,11 @@ contains
       call ladvzu(nzp,nxp,nyp,a_up,a_ut,a_scr1,a_scr2,dztri)
     end if 
 
-    if (sflg) then
-       call get_avg3(nzp,nxp,nyp,a_scr2,v4)
-       call updtst(nzp,'adv',-1,v4,1)
-    end if
+! Disabling old statisitcs interface (DAN)
+!    if (sflg) then
+!       call get_avg3(nzp,nxp,nyp,a_scr2,v4)
+!       call updtst(nzp,'adv',-1,v4,1)
+!    end if
     
     !
     ! advection of v by (u,v,w) all at current timelevel.  also when flag
@@ -90,11 +93,12 @@ contains
       call ladvyv(nzp,nxp,nyp,a_vp,a_vt,a_scr2,dyi)
       call ladvzv(nzp,nxp,nyp,a_vp,a_vt,a_scr1,a_scr2,dztri)  
     end if   
- 
-    if (sflg) then
-       call get_avg3(nzp,nxp,nyp,a_scr2,v4)
-       call updtst(nzp,'adv',-2,v4,1)
-    end if
+
+! Disabling old statisitcs interface (DAN) 
+!    if (sflg) then
+!       call get_avg3(nzp,nxp,nyp,a_scr2,v4)
+!       call updtst(nzp,'adv',-2,v4,1)
+!    end if
     
     !
     ! advection of w by (u,v,w) all at current timelevel.  also when flag
@@ -109,14 +113,15 @@ contains
       call ladvyw(nzp,nxp,nyp,a_vp,a_wp,a_wt,a_scr2,dyi)
       call ladvzw(nzp,nxp,nyp,a_wp,a_wt,a_scr1,a_scr2,dzmri)
     end if
- 
-    if (sflg) then
-       call get_avg3(nzp,nxp,nyp,a_scr2,v4)
-       call updtst(nzp,'adv',-3,v4,1)
-    end if
 
-    if (sflg) call acc_tend(nzp,nxp,nyp,a_up,a_vp,a_wp,a_ut,a_vt,a_wt,        &
-         v1,v2,v3,2,'adv')
+! Disabling old statisitcs interface (DAN) 
+!    if (sflg) then
+!       call get_avg3(nzp,nxp,nyp,a_scr2,v4)
+!       call updtst(nzp,'adv',-3,v4,1)
+!    end if
+!
+!    if (sflg) call acc_tend(nzp,nxp,nyp,a_up,a_vp,a_wp,a_ut,a_vt,a_wt,        &
+!         v1,v2,v3,2,'adv')
          
     deallocate(dzmri, dztri, v1, v2, v3, v4)
 

@@ -69,7 +69,9 @@ contains
          write_hist
     use ncio, only : write_anal, close_anal
     use modcross, only : triggercross, exitcross, lcross
-    use stat, only : savg_intvl, ssam_intvl, write_ps, close_stat
+! Disable old statistic interace (DAN)
+!    use stat, only : savg_intvl, ssam_intvl, write_ps, close_stat
+    use stat, only : savg_intvl, ssam_intvl
     use thrm, only : thermo
     use modparticles, only : lpartic, exit_particles, lpartdump, exitparticledump, &
          lpartstat, exitparticlestat, write_particle_hist, particlestat, &
@@ -129,8 +131,9 @@ contains
        !if(lpartic .and. lpartstat .and. statflg .and. (savgflg .eqv. .false.)) call particlestat(.false.,time+dt)
 
        if(savgflg) then
-         if(myid==0) print*,'     profiles at time=',time
-         call write_ps(nzp,dn0,u0,v0,zm,zt,time)
+! Disable old statistic interace (DAN)
+!         if(myid==0) print*,'     profiles at time=',time
+!         call write_ps(nzp,dn0,u0,v0,zm,zt,time)
          if (lpartic .and. lpartstat) call particlestat(.true.,time)
        end if
 
@@ -204,7 +207,8 @@ contains
 
     if (lcross) call exitcross
 
-    iret = close_stat()
+! Disable old statistic interace (DAN)
+!    iret = close_stat()
 
     if ((t2-t0) .ge. wctime .and. myid == 0) write(*,*) '  Wall clock limit wctime reached, stopped simulation for restart'
     if (time.ge.timmax .and. myid == 0) write(*,*) '  Max simulation time timmax reached. Finished simulation successfully'
@@ -308,7 +312,8 @@ contains
     use grid, only : level, dt, nstep, a_tt, a_up, a_vp, a_wp, dxi, dyi, dzi_t, &
          nxp, nyp, nzp, dn0,a_scr1, u0, v0, a_ut, a_vt, a_wt, zt, a_ricep, a_rct, a_rpt, &
          lwaterbudget, a_xt2
-    use stat, only : sflg, statistics
+! Disable old statistic interace (DAN)
+!    use stat, only : sflg, statistics
     use sgsm, only : diffuse
     !use sgsm_dyn, only : calc_cs
     use srfc, only : surface
@@ -329,6 +334,7 @@ contains
     logical, parameter :: debug = .false.
     real :: xtime
     character (len=8) :: adv='monotone'
+    logical :: sflg 
 
     xtime = time/86400. + strtim
     call timedep(time,timmax, sst)
@@ -397,7 +403,8 @@ contains
        if (debug) WRITE (0,*) 't_step statflg thermo, myid=',myid
        call thermo (level)
        if (debug) WRITE (0,*) 't_step statflg statistics, myid=',myid
-       call statistics (time+dt)
+! Disable old statistic interace (DAN)
+!       call statistics (time+dt)
        if(lpartic .and. lpartstat) call particlestat(.false.,time+dt)
        sflg = .False.
     end if
@@ -581,12 +588,14 @@ contains
   subroutine cfl(cflmax)
 
     use grid, only : a_up,a_vp,a_wp,nxp,nyp,nzp,dxi,dyi,dzi_t,dt
-    use stat, only : fill_scalar
+! Disable old statistic interace (DAN)
+!    use stat, only : fill_scalar
 
     real, intent (out)   :: cflmax
 
     cflmax =  cfll(nzp,nxp,nyp,a_up,a_vp,a_wp,dxi,dyi,dzi_t,dt)
-    call fill_scalar(1,cflmax)
+! Disable old statistic interace (DAN)
+!    call fill_scalar(1,cflmax)
 
   end subroutine cfl
   !
@@ -618,12 +627,14 @@ contains
   subroutine peclet(pecletmax)
 
     use grid, only : a_km,nxp,nyp,nzp,dxi,dyi,dzi_t,dt
-    use stat, only : fill_scalar
+! Disable old statistic interace (DAN)
+!    use stat, only : fill_scalar
 
     real, intent (out)   :: pecletmax
 
     pecletmax =  pecletl(nzp,nxp,nyp,a_km,dxi,dyi,dzi_t,dt)
-    call fill_scalar(1,pecletmax)
+! Disable old statistic interace (DAN)
+!    call fill_scalar(1,pecletmax)
 
   end subroutine peclet
   !
@@ -655,7 +666,8 @@ contains
 
     use grid, only : a_up, a_vp, a_wp, a_wt, vapor, a_theta, a_scr1, a_scr3,liquid,&
          a_rp,a_rpp,a_ricep, a_rsnowp, a_rgrp, a_rhailp, nxp, nyp, nzp, dzi_m, th00, level, pi1
-    use stat, only : sflg, comp_tke
+! Disable old statistic interace (DAN)
+!    use stat, only : sflg, comp_tke
     use util, only : ae1mm
     use thrm, only : update_pi1
     real, dimension(nzp,nxp,nyp) :: rl
@@ -675,7 +687,8 @@ contains
     call ae1mm(nzp,nxp,nyp,a_wt,awtbar)
     call update_pi1(nzp,awtbar,pi1)
 
-    if (sflg)  call comp_tke(nzp,nxp,nyp,dzi_m,th00,a_up,a_vp,a_wp,a_scr1,a_scr3)
+! Disabling old statistics interface (DAN)
+!    if (sflg)  call comp_tke(nzp,nxp,nyp,dzi_m,th00,a_up,a_vp,a_wp,a_scr1,a_scr3)
 
   end subroutine buoyancy
   !

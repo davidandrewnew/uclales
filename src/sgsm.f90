@@ -19,7 +19,8 @@
 !
 module sgsm
 
-  use stat, only : sflg, updtst, acc_tend, sgsflxs, sgs_vel
+! Disabling old statisitcs interface (DAN)
+!  use stat, only : sflg, updtst, acc_tend, sgsflxs, sgs_vel
   use util, only : tridiff
   implicit none
 !
@@ -103,12 +104,16 @@ contains
     ! ----------
     ! Calculate Eddy Viscosity/Diffusivity 
     !
-    call smagor(nzp,nxp,nyp,sflg,dxi,dyi,dn0,a_scr3,a_scr2,a_km,a_scr7,zm)
+! Disabling old statisitcs interface (DAN)
+!    call smagor(nzp,nxp,nyp,sflg,dxi,dyi,dn0,a_scr3,a_scr2,a_km,a_scr7,zm)
+    call smagor(nzp,nxp,nyp,.false.,dxi,dyi,dn0,a_scr3,a_scr2,a_km,a_scr7,zm)
+
     !
     ! Diffuse momentum
     !
-    if (sflg) call acc_tend(nzp,nxp,nyp,a_up,a_vp,a_wp,a_ut,a_vt,a_wt         &
-         ,sz4,sz5,sz6,1,'sgs')
+! Disabling old statisitcs interface (DAN)
+!    if (sflg) call acc_tend(nzp,nxp,nyp,a_up,a_vp,a_wp,a_ut,a_vt,a_wt         &
+!         ,sz4,sz5,sz6,1,'sgs')
 
     call diff_prep(nzp,nxp,nyp,a_scr5,a_scr6,a_scr4,a_km)
 
@@ -130,11 +135,12 @@ contains
     call cyclics(nzp,nxp,nyp,a_ut,req)
     call cyclicc(nzp,nxp,nyp,a_ut,req)
 
-    if (sflg) then
-       call sgs_vel(nzp,nxp,nyp,sz1,sz2,sz3)
-       call acc_tend(nzp,nxp,nyp,a_up,a_vp,a_wp,a_ut,a_vt,a_wt,sz4,sz5,sz6    &
-            ,2,'sgs')
-    end if
+! DAN
+!    if (sflg) then
+!       call sgs_vel(nzp,nxp,nyp,sz1,sz2,sz3)
+!       call acc_tend(nzp,nxp,nyp,a_up,a_vp,a_wp,a_ut,a_vt,a_wt,sz4,sz5,sz6    &
+!            ,2,'sgs')
+!    end if
 
     !
     ! Diffuse scalars
@@ -148,22 +154,24 @@ contains
        if ( associated(a_rp,a_sp) ) call atob(nxyp,wq_sfc,sxy1)
        if ( associated(a_cvrxp,a_sp) ) call atob(nxyp,trac_sfc,sxy1)
 
-       if (sflg) call azero(nxyzp,a_scr1)
+! Disabling old statisitcs interface (DAN)
+!       if (sflg) call azero(nxyzp,a_scr1)
 
        call diffsclr(nzp,nxp,nyp,dt,dxi,dyi,dzi_m,dzi_t,dn0,sxy1,sxy2   &
             ,a_sp,a_scr2,a_st,a_scr1)
 
-       if (sflg) then
-
-          call get_avg3(nzp,nxp,nyp,a_scr1,sz1)
-
-          call updtst(nzp,'sgs',n-3,sz1,1)
-          if (associated(a_sp,a_tp))                                          &
-             call sgsflxs(nzp,nxp,nyp,level,liquid,vapor,a_theta,a_scr1,'tl')
-          if (associated(a_sp,a_rp))                                          &
-             call sgsflxs(nzp,nxp,nyp,level,liquid,vapor,a_theta,a_scr1,'rt')
-
-       endif
+! Disabling old statisitcs interface (DAN)
+!!$       if (sflg) then
+!!$
+!!$          call get_avg3(nzp,nxp,nyp,a_scr1,sz1)
+!!$
+!!$          call updtst(nzp,'sgs',n-3,sz1,1)
+!!$          if (associated(a_sp,a_tp))                                          &
+!!$             call sgsflxs(nzp,nxp,nyp,level,liquid,vapor,a_theta,a_scr1,'tl')
+!!$          if (associated(a_sp,a_rp))                                          &
+!!$             call sgsflxs(nzp,nxp,nyp,level,liquid,vapor,a_theta,a_scr1,'rt')
+!!$
+!!$       endif
        call cyclics(nzp,nxp,nyp,a_st,req)
        call cyclicc(nzp,nxp,nyp,a_st,req)
     enddo
@@ -255,7 +263,8 @@ contains
   subroutine smagor(n1,n2,n3,sflg,dxi,dyi,dn0,ri,kh,km,szxy,zm)
       
     use defs, only          : pi, vonk
-    use stat, only          : tke_sgs
+! Disabling old statisitcs interface (DAN)
+!    use stat, only          : tke_sgs
     use util, only          : get_avg3, get_cor3, calclevel
     use mpi_interface, only : cyclics, cyclicc
     use grid, only          : liquid
@@ -308,28 +317,28 @@ contains
     call cyclics(n1,n2,n3,km,req)
     call cyclicc(n1,n2,n3,km,req)
 
-
-    if (sflg) then
-       call get_cor3(n1,n2,n3,km,km,sz1)
-       ! 
-       ! The product km and kh represent the local dissipation rate
-       ! 
-       call get_cor3(n1,n2,n3,km,kh,sz2)
-       call updtst(n1,'sgs',-2,sz2,1)      ! dissipation averaged over domain
-       do k=1,n1
-          !
-          ! the factor 1/pi^2 probably represents the ratio of the constants
-          ! Cm/Ce that appears in the definition of TKE, the factor csx^2
-          ! will cancel out with the csx^2 that appears in the numerator of  
-          ! variable sz1 which corresponds to Km^2.
-          !
-          tke_sgs(k) = sz1(k)/(delta*pi*(csx**2))**2
-          sz1(k) = 1./sqrt(1./(delta*csx)**2.+1./(zm(k)*vonk+0.001)**2.)
-       end do
-       call updtst(n1,'sgs',-1,tke_sgs,1) ! sgs tke
-       call updtst(n1,'sgs',-5,sz1,1)      ! mixing length
-       call updtst(n1,'sgs',-6,sz1,1)      ! dissipation lengthscale
-    end if
+! Disabling old statisitcs interface (DAN)
+!!$    if (sflg) then
+!!$       call get_cor3(n1,n2,n3,km,km,sz1)
+!!$       ! 
+!!$       ! The product km and kh represent the local dissipation rate
+!!$       ! 
+!!$       call get_cor3(n1,n2,n3,km,kh,sz2)
+!!$       call updtst(n1,'sgs',-2,sz2,1)      ! dissipation averaged over domain
+!!$       do k=1,n1
+!!$          !
+!!$          ! the factor 1/pi^2 probably represents the ratio of the constants
+!!$          ! Cm/Ce that appears in the definition of TKE, the factor csx^2
+!!$          ! will cancel out with the csx^2 that appears in the numerator of  
+!!$          ! variable sz1 which corresponds to Km^2.
+!!$          !
+!!$          tke_sgs(k) = sz1(k)/(delta*pi*(csx**2))**2
+!!$          sz1(k) = 1./sqrt(1./(delta*csx)**2.+1./(zm(k)*vonk+0.001)**2.)
+!!$       end do
+!!$       call updtst(n1,'sgs',-1,tke_sgs,1) ! sgs tke
+!!$       call updtst(n1,'sgs',-5,sz1,1)      ! mixing length
+!!$       call updtst(n1,'sgs',-6,sz1,1)      ! dissipation lengthscale
+!!$    end if
 
     do j=3,n3-2
        do i=3,n2-2
@@ -366,12 +375,12 @@ contains
     call cyclics(n1,n2,n3,kh,req)
     call cyclicc(n1,n2,n3,kh,req)
 
-    if (sflg) then
-       call get_avg3(n1,n2,n3,km,sz3)
-       call updtst(n1,'sgs',-3,sz3,1)  ! eddy viscosity
-       call get_avg3(n1,n2,n3,kh,sz2)
-       call updtst(n1,'sgs',-4,sz2,1)  ! eddy diffusivity
-    end if
+!!$    if (sflg) then
+!!$       call get_avg3(n1,n2,n3,km,sz3)
+!!$       call updtst(n1,'sgs',-3,sz3,1)  ! eddy viscosity
+!!$       call get_avg3(n1,n2,n3,kh,sz2)
+!!$       call updtst(n1,'sgs',-4,sz2,1)  ! eddy diffusivity
+!!$    end if
 
   end subroutine smagor
   !

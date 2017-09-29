@@ -33,7 +33,8 @@ contains
 !-----------------------------------------------------------------------------
   subroutine scalarSecond
     use advf, only : mamaos, mamaos_x, mamaos_y, advtnd
-    use stat, only : sflg, updtst
+! Disabling old statisitcs interface (DAN)
+!    use stat, only : sflg, updtst
     use util, only : atob, get_avg3
     use grid, only : nzp, nxp, nyp, nxyzp, dxi, dyi, dzi_t, dzi_m, nscl, &
                      a_up, a_vp, a_wp, a_sp, a_st, newvar, dn0, &
@@ -71,10 +72,11 @@ contains
            call atob(nxyzp,a_wp,a_scr2)
            call mamaos(nzp,nxp,nyp,a_scr2,a_sp,a_scr1,dzi_t,dzi_m,dn0,dt,.false.)
 
-           if (sflg) then
-              call get_avg3(nzp,nxp,nyp,a_scr2,v1da)
-              call updtst(nzp,'adv',n-3,v1da,1)
-           end if
+! Disabling old statisitcs interface (DAN)
+!           if (sflg) then
+!              call get_avg3(nzp,nxp,nyp,a_scr2,v1da)
+!              call updtst(nzp,'adv',n-3,v1da,1)
+!           end if
 
            call advtnd(nzp,nxp,nyp,a_sp,a_scr1,a_st,dt)
            cycle
@@ -102,7 +104,8 @@ contains
     use grid, only : nzp, nxp, nyp, nxyzp, dxi, dyi, dzi_t, dzi_m, nscl, &
                      a_up, a_vp, a_wp, a_sp, a_st, newvar, dn0, &
                      a_scr1, a_scr2, nstep, dt
-    use stat, only : sflg, updtst
+! Disabling old statisitcs interface (DAN)
+!    use stat, only : sflg, updtst
     use util, only : atob, get_avg3
      
     real, dimension(:,:,:), allocatable    :: rhow
@@ -145,10 +148,11 @@ contains
             call atob(nxyzp,a_wp,a_scr2)
             call mamaos(nzp,nxp,nyp,a_scr2,a_sp,a_scr1,dzi_t,dzi_m,dn0,dt,.false.)
 
-            if (sflg) then
-              call get_avg3(nzp,nxp,nyp,a_scr2,v1da)
-              call updtst(nzp,'adv',n-3,v1da,1)
-            end if
+! Disabling old statisitcs interface (DAN)
+!            if (sflg) then
+!              call get_avg3(nzp,nxp,nyp,a_scr2,v1da)
+!              call updtst(nzp,'adv',n-3,v1da,1)
+!            end if
 
             call advtnd(nzp,nxp,nyp,a_sp,a_scr1,a_st,dt)
             cycle
@@ -175,7 +179,8 @@ contains
     use grid, only : nzp, nxp, nyp, nxyzp, dxi, dyi, dzi_t, dzi_m, nscl, &
                      a_up, a_vp, a_wp, a_sp, a_st, newvar, dn0, &
                      a_scr1, a_scr2, nstep, dt
-    use stat, only : sflg, updtst
+! Disabling old statisitcs interface (DAN)
+!    use stat, only : sflg, updtst
     use util, only : atob, get_avg3
      
     real, dimension(:,:,:), allocatable    :: rhow
@@ -227,10 +232,11 @@ contains
             call atob(nxyzp,a_wp,a_scr2)
             call mamaos(nzp,nxp,nyp,a_scr2,a_sp,a_scr1,dzi_t,dzi_m,dn0,dt,.false.)
 
-            if (sflg) then
-              call get_avg3(nzp,nxp,nyp,a_scr2,v1da)
-              call updtst(nzp,'adv',n-3,v1da,1)
-            end if
+! Disabling old statisitcs interface (DAN)
+!            if (sflg) then
+!              call get_avg3(nzp,nxp,nyp,a_scr2,v1da)
+!              call updtst(nzp,'adv',n-3,v1da,1)
+!            end if
 
             call advtnd(nzp,nxp,nyp,a_sp,a_scr1,a_st,dt)
             cycle

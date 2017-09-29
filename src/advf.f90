@@ -36,7 +36,8 @@ contains
          dn0 , nxp, nyp, nzp, nxyzp, dt, dzi_t, dzi_m, zt, dxi, dyi, level, nscl, &
          newvar, nstep
 
-    use stat, only      : sflg, updtst
+! Disabling old statisitcs interface (DAN)
+!    use stat, only      : sflg, updtst
     use util, only      : atob, get_avg3
 
     real    :: v1da(nzp)
@@ -44,13 +45,14 @@ contains
     !
     ! diagnose liquid water flux
     !
-    if (sflg .and. level > 1) then
-       call atob(nxyzp,liquid,a_scr1)
-       call atob(nxyzp,a_wp,a_scr2)
-       call mamaos(nzp,nxp,nyp,a_scr2,liquid,a_scr1,zt,dzi_m,dn0,dt,.false.)
-       call get_avg3(nzp,nxp,nyp,a_scr2,v1da)
-       call updtst(nzp,'adv',0,v1da,1)
-    end if
+! Disabling old statisitcs interface (DAN)
+!!$    if (sflg .and. level > 1) then
+!!$       call atob(nxyzp,liquid,a_scr1)
+!!$       call atob(nxyzp,a_wp,a_scr2)
+!!$       call mamaos(nzp,nxp,nyp,a_scr2,liquid,a_scr1,zt,dzi_m,dn0,dt,.false.)
+!!$       call get_avg3(nzp,nxp,nyp,a_scr2,v1da)
+!!$       call updtst(nzp,'adv',0,v1da,1)
+!!$    end if
     !
     ! loop through the scalar table, setting iscp and isct to the 
     ! appropriate scalar pointer and do the advection, also add large
@@ -66,10 +68,11 @@ contains
        call atob(nxyzp,a_wp,a_scr2)
        call mamaos(nzp,nxp,nyp,a_scr2,a_sp,a_scr1,dzi_t,dzi_m,dn0,dt,.false.)
 
-       if (sflg) then
-          call get_avg3(nzp,nxp,nyp,a_scr2,v1da)
-          call updtst(nzp,'adv',n-3,v1da,1)
-       end if
+! Disabling old statisitcs interface (DAN)
+!!$       if (sflg) then
+!!$          call get_avg3(nzp,nxp,nyp,a_scr2,v1da)
+!!$          call updtst(nzp,'adv',n-3,v1da,1)
+!!$       end if
 
        call advtnd(nzp,nxp,nyp,a_sp,a_scr1,a_st,dt)
     end do

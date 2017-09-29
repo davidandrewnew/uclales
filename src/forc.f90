@@ -26,7 +26,8 @@ module forc
   !cgils
   use grid, only      : wfls, dthldtls, dqtdtls, sfc_albedo, lrad_ca
   use modnudge, only  : nudge, nudge_bound, lnudge_bound !LINDA 
-  use stat, only : sflg
+! Disabling old statisitcs interface (DAN)
+!  use stat, only : sflg
   implicit none
 
   !character (len=5), parameter :: case_name = 'xxxx'
@@ -109,18 +110,19 @@ contains
                   sflxu_toa=sflxu_toa,sflxd_toa=sflxd_toa,&
                   lflxu_toa=lflxu_toa,lflxd_toa=lflxd_toa)
           end select
-          if (sflg .and. lrad_ca) then
-            dum0 = 0.
-            dum1 = 0.
-            dum2 = 0.
-            dum3 = 0.
-            dum4 = 0.
-            call d4stream(nzp, nxp, nyp, cntlat, time_in, sst, 0.05, CCN,   &
-               dn0, pi0, pi1, dzi_t, a_pexnr, a_theta, vapor, dum0, dum1,&
-               dum2, dum3, a_lflxu_ca, a_lflxd_ca,a_sflxu_ca,a_sflxd_ca, albedo, &
-               rr=dum4,sflxu_toa=sflxu_toa_ca,sflxd_toa=sflxd_toa_ca,&
-               lflxu_toa=lflxu_toa_ca,lflxd_toa=lflxd_toa_ca)
-          end if
+! Disabling old statisitcs interface (DAN)
+!!$          if (sflg .and. lrad_ca) then
+!!$            dum0 = 0.
+!!$            dum1 = 0.
+!!$            dum2 = 0.
+!!$            dum3 = 0.
+!!$            dum4 = 0.
+!!$            call d4stream(nzp, nxp, nyp, cntlat, time_in, sst, 0.05, CCN,   &
+!!$               dn0, pi0, pi1, dzi_t, a_pexnr, a_theta, vapor, dum0, dum1,&
+!!$               dum2, dum3, a_lflxu_ca, a_lflxd_ca,a_sflxu_ca,a_sflxd_ca, albedo, &
+!!$               rr=dum4,sflxu_toa=sflxu_toa_ca,sflxd_toa=sflxd_toa_ca,&
+!!$               lflxu_toa=lflxu_toa_ca,lflxd_toa=lflxd_toa_ca)
+!!$          end if
         else
           if (myid == 0) print *, '  ABORTING: inproper call to radiation'
           call appl_abort(0)
