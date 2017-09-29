@@ -36,7 +36,8 @@ contains
 
     use grid, only : nxp, nyp, nzp, dxi, dyi, dzi_m, dzi_t, dt, a_up, a_ut,      &
          a_vp, a_vt, a_wp, a_wt, press, a_pexnr, th00, dn0, wsavex, wsavey
-    use stat, only : fill_scalar, sflg
+! Disabling old statisitcs interface (DAN)
+!    use stat, only : fill_scalar, sflg
     use util, only : ae1mm
 
     complex, allocatable     :: s1(:,:,:)
@@ -60,13 +61,14 @@ contains
     !
     ! -------
 
-    if (sflg) then
-  
-       call get_diverg(nzp,nxp,nyp,ix,iy,s1,a_up,a_vp,a_wp, &
-            dn0,dzi_t,dxi,dyi,dt,mxdiv)
-       call fill_scalar(2,mxdiv)
-       call prs_cor(nzp,nxp,nyp,a_pexnr,a_up,a_vp,a_wp,dzi_m,dxi,dyi,th00)
-    end if
+! Disabling old statisitcs interface (DAN)
+!!$    if (sflg) then
+!!$  
+!!$       call get_diverg(nzp,nxp,nyp,ix,iy,s1,a_up,a_vp,a_wp, &
+!!$            dn0,dzi_t,dxi,dyi,dt,mxdiv)
+!!$       call fill_scalar(2,mxdiv)
+!!$       call prs_cor(nzp,nxp,nyp,a_pexnr,a_up,a_vp,a_wp,dzi_m,dxi,dyi,th00)
+!!$    end if
    
     deallocate (s1)
 
@@ -301,7 +303,8 @@ contains
   !
   subroutine prs_cor(n1,n2,n3,p,u,v,w,dz,dx,dy,th00)
 
-    use stat, only : updtst
+! Disabling old statisitcs interface (DAN)
+!    use stat, only : updtst
     use util, only : get_cor
 
     integer, intent (in) :: n1,n2,n3
@@ -336,9 +339,10 @@ contains
        v1db(k) = get_cor(1,n2,n3,1,vfld,pgy)
        v1dc(k) = get_cor(1,n2,n3,1,wfld,pgz)
     enddo
-    call updtst(n1,'prs',1,v1da,1)
-    call updtst(n1,'prs',2,v1db,1)
-    call updtst(n1,'prs',3,v1dc,1)
+! Disable old statisitcs interface (DAN)
+!    call updtst(n1,'prs',1,v1da,1)
+!    call updtst(n1,'prs',2,v1db,1)
+!    call updtst(n1,'prs',3,v1dc,1)
 
   end subroutine prs_cor
 
