@@ -69,9 +69,9 @@ contains
          write_hist
     use ncio, only : write_anal, close_anal
     use modcross, only : triggercross, exitcross, lcross
-! Disable old statistic interace (DAN)
+! Use new statistics interace (DAN)
 !    use stat, only : savg_intvl, ssam_intvl, write_ps, close_stat
-    use stat, only : savg_intvl, ssam_intvl
+    use modstat, only : savg_intvl, ssam_intvl, write_stat, exit_stat
     use thrm, only : thermo
     use modparticles, only : lpartic, exit_particles, lpartdump, exitparticledump, &
          lpartstat, exitparticlestat, write_particle_hist, particlestat, &
@@ -109,10 +109,13 @@ contains
        dt = min(dtlong,dt*peak_cfl/(cflmax+epsilon(1.)))
 
        call stathandling
-       if(myid .eq. 0 .and. statflg) print*,'     sampling stat at t=',time+dt
+! Sample statistics at time step instead of before it (DAN)
+!       if(myid .eq. 0 .and. statflg) print*,'     sampling stat at t=',time+dt
+       if(myid .eq. 0 .and. statflg) print*,'     sampling stat at t=',time
 
        call t_step
-       time = time + dt
+       ! add time step after saving statistics instead (DAN)
+!       time = time + dt
 
 ! DAN
 !!$       call cfl(cflmax)
@@ -134,8 +137,11 @@ contains
 ! Disable old statistic interace (DAN)
 !         if(myid==0) print*,'     profiles at time=',time
 !         call write_ps(nzp,dn0,u0,v0,zm,zt,time)
+         call write_stat(time)
          if (lpartic .and. lpartstat) call particlestat(.true.,time)
        end if
+
+       time = time + dt ! add time step after saving statistics instead (DAN)
 
        if (hisflg) then
          if(myid==0) print*,'     history at time=',time
@@ -207,8 +213,9 @@ contains
 
     if (lcross) call exitcross
 
-! Disable old statistic interace (DAN)
+! Replace old statistics exit interace (DAN)
 !    iret = close_stat()
+    call exit_stat
 
     if ((t2-t0) .ge. wctime .and. myid == 0) write(*,*) '  Wall clock limit wctime reached, stopped simulation for restart'
     if (time.ge.timmax .and. myid == 0) write(*,*) '  Max simulation time timmax reached. Finished simulation successfully'
@@ -225,7 +232,9 @@ contains
   subroutine stathandling
     use grid, only          : dt
     use defs, only          : long
-    use stat, only          : savg_intvl, ssam_intvl
+! Use new statistics interface (DAN)
+!    use stat, only          : savg_intvl, ssam_intvl
+    use modstat, only       : savg_intvl, ssam_intvl
     use modcross, only      : lcross
     use mpi_interface, only : myid
     use modparticles, only  : lpartic,lpartdump,frqpartdump
@@ -274,23 +283,32 @@ contains
     crossflg = .false.
     lpdumpflg= .false.
 
-    if(mod(itime+idt,issam_intvl) .eq. 0) then
+!
+! Add time step after saving statistics instead (DAN)
+!
+!    if(mod(itime+idt,issam_intvl) .eq. 0) then
+    if(mod(itime,issam_intvl) .eq. 0) then ! DAN
       statflg    = .true.
     end if
-    if(mod(itime+idt,isavg_intvl) .eq. 0) then
+!    if(mod(itime+idt,isavg_intvl) .eq. 0) then
+    if(mod(itime,isavg_intvl) .eq. 0) then ! DAN
       statflg    = .true.
       savgflg    = .true.
     end if
-    if(mod(itime+idt,ifrqanl)     .eq. 0) then
+!    if(mod(itime+idt,ifrqanl)     .eq. 0) then
+    if(mod(itime,ifrqanl)     .eq. 0) then ! DAN
       anlflg     = .true.
     end if
-    if(mod(itime+idt,ifrqhis)     .eq. 0) then
+!    if(mod(itime+idt,ifrqhis)     .eq. 0) then
+    if(mod(itime,ifrqhis)     .eq. 0) then ! DAN
       hisflg     = .true.
     end if
-    if((mod(itime+idt,ifrqcross)   .eq. 0) .and. lcross) then
+!    if((mod(itime+idt,ifrqcross)   .eq. 0) .and. lcross) then
+    if((mod(itime,ifrqcross)   .eq. 0) .and. lcross) then ! DAN
       crossflg   = .true.
     end if
-    if((mod(itime+idt,ifrqlpdump)  .eq. 0) .and. lpartic .and. lpartdump) then
+!    if((mod(itime+idt,ifrqlpdump)  .eq. 0) .and. lpartic .and. lpartdump) then
+    if((mod(itime,ifrqlpdump)  .eq. 0) .and. lpartic .and. lpartdump) then ! DAN
       lpdumpflg  = .true.
     end if
 
@@ -344,9 +362,11 @@ contains
        ! updated every 'ssam_intvl' outside the main statistics module
        ! are not updated (summed) in all three RK substeps.
 
-       if (statflg .and. nstep.eq.3) then
-          sflg = .True.
-       end if
+! Add time step after saving statistics instead (DAN)
+!       if (statflg .and. nstep.eq.3) then
+!          sflg = .True.
+!       end if
+       sflg = statflg .and. nstep == 1
 
        if (lpartic) then
          call particles(time,timmax)
@@ -390,6 +410,9 @@ contains
        call buoyancy
        call sponge
        call decay
+
+       if (sflg) call stat(time) ! Call statistics driver (DAN) 
+
        call update (nstep)
        call poisson
        call velset(nzp,nxp,nyp,a_up,a_vp,a_wp)
@@ -399,15 +422,15 @@ contains
     if(lpartic .and. lpartdrop) call deactivate_drops(time+dt)
     if(lpartic .and. lpartdrop) call activate_drops(time+dt)
 
-    if (statflg) then
-       if (debug) WRITE (0,*) 't_step statflg thermo, myid=',myid
-       call thermo (level)
-       if (debug) WRITE (0,*) 't_step statflg statistics, myid=',myid
-! Disable old statistic interace (DAN)
-!       call statistics (time+dt)
-       if(lpartic .and. lpartstat) call particlestat(.false.,time+dt)
-       sflg = .False.
-    end if
+! Add time step after saving statistics instead (DAN)
+!!$    if (statflg) then
+!!$       if (debug) WRITE (0,*) 't_step statflg thermo, myid=',myid
+!!$       call thermo (level)
+!!$       if (debug) WRITE (0,*) 't_step statflg statistics, myid=',myid
+!!$       call statistics (time+dt)
+!!$       if(lpartic .and. lpartstat) call particlestat(.false.,time+dt)
+!!$       sflg = .False.
+!!$    end if
 
   end subroutine t_step
   !

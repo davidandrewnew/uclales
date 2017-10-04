@@ -46,12 +46,14 @@ if(MPI)
  MESSAGE(STATUS "MPI is Enabled.")
  FILE(GLOB mpifile "${CMAKE_CURRENT_SOURCE_DIR}/src/mpi/mpi_interface.f90")
  FILE(GLOB f_netcdf_interface "${CMAKE_CURRENT_SOURCE_DIR}/src/mpi/netcdf_interface.f90") # DAN
+ FILE(GLOB f_util_mpi         "${CMAKE_CURRENT_SOURCE_DIR}/src/mpi/util_mpi.f90") # DAN
 else()
   MESSAGE(STATUS "MPI is Disabled.")
   FILE(GLOB mpifile "${CMAKE_CURRENT_SOURCE_DIR}/src/seq/seq_interface.f90")
 endif()
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different ${mpifile} ${CMAKE_CURRENT_SOURCE_DIR}/src/mpi_interface.f90)
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different ${f_netcdf_interface} ${CMAKE_CURRENT_SOURCE_DIR}/src/netcdf_interface.f90) # DAN
+execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different ${f_util_mpi} ${CMAKE_CURRENT_SOURCE_DIR}/src/util_mpi.f90) # DAN
 
 get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER_ID} NAME)
 

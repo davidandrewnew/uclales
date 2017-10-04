@@ -64,6 +64,7 @@ contains
     use modparticles, only: init_particles, lpartic, lpartdump, lpartstat, initparticledump, initparticlestat, write_particle_hist, particlestat
 
     use netcdf_interface, only : init_netcdf_interface ! DAN
+    use modstat, only          : init_stat, stat, write_stat ! DAN
 
     implicit none
 
@@ -126,6 +127,9 @@ contains
      ! Initialize NetCDF interface (DAN)
      call init_netcdf_interface
 
+     ! Initialize statistics (DAN)
+     call init_stat(time)
+
     if (lpartic) then
       if(runtype == 'INITIAL') then
         call init_particles(.false.)
@@ -147,7 +151,7 @@ contains
           call write_anal(time)
           call initcross(time, filprf)
           call triggercross(time)
-          ! Disable old statistic interace (DAN)
+          ! Sampling and writing of initial statistics handled in step.f90 now (DAN)
           !call statistics (time)
           !call write_ps(nzp,dn0,u0,v0,zm,zt,time)
           if(lpartic) call particlestat(.false.,time)

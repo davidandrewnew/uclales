@@ -92,7 +92,9 @@ contains
          CCN, lwaterbudget, lcouvreux, prc_lev, isfctyp, sfc_albedo, lrad_ca
     use init, only : us, vs, ts, rts, ps, hs, ipsflg, itsflg,irsflg, iseed, hfilin,   &
          zrand,lhomrestart,mag_pert_q,mag_pert_t
-    use stat, only : ssam_intvl, savg_intvl
+! Use new statistics interface (DAN)
+!    use stat, only : ssam_intvl, savg_intvl
+    use modstat, only : ssam_intvl, savg_intvl
     use mpi_interface, only : myid, appl_abort
     use radiation, only : u0, fixed_sun, rad_eff_radius, radMcICA
     use modnudge, only : lnudge,tnudgefac, qfloor, zfloor, znudgemin, znudgeplus, &
