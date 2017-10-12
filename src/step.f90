@@ -698,6 +698,7 @@ contains
 
     use grid, only : a_up, a_vp, a_wp, a_wt, vapor, a_theta, a_scr1, a_scr3,liquid,&
          a_rp,a_rpp,a_ricep, a_rsnowp, a_rgrp, a_rhailp, nxp, nyp, nzp, dzi_m, th00, level, pi1
+    use grid, only : a_b ! Use buoyancy field instead of scratch variable (DAN)
 ! Disable old statistic interace (DAN)
 !    use stat, only : sflg, comp_tke
     use util, only : ae1mm
@@ -711,9 +712,13 @@ contains
     if (level>4) rl = rl + a_rhailp
 
     if(level>0) then
-      call boyanc(nzp,nxp,nyp,level,a_wt,a_theta,th00,a_scr1,vapor,rl)
+! Use buoyancy field instead of scratch variable (DAN)
+!      call boyanc(nzp,nxp,nyp,level,a_wt,a_theta,th00,a_scr1,vapor,rl)
+      call boyanc(nzp,nxp,nyp,level,a_wt,a_theta,th00,a_b,vapor,rl) ! DAN
     else
-      call boyanc(nzp,nxp,nyp,level,a_wt,a_theta,th00,a_scr1)
+! Use buoyancy field instead of scratch variable (DAN)
+!      call boyanc(nzp,nxp,nyp,level,a_wt,a_theta,th00,a_scr1)
+      call boyanc(nzp,nxp,nyp,level,a_wt,a_theta,th00,a_b) ! DAN
     end if
 
     call ae1mm(nzp,nxp,nyp,a_wt,awtbar)
