@@ -97,9 +97,6 @@ contains
     call write_var(ncid, 'tt_ls', dthldtls)
     if (level >= 1) call write_var(ncid, 'qt_ls', dqtdtls)
 
-    ! Couvreux scalar
-    
-
     ! Initialize record index
     irec = 0
 

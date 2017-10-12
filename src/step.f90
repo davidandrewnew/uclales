@@ -71,7 +71,7 @@ contains
     use modcross, only : triggercross, exitcross, lcross
 ! Use new statistics interace (DAN)
 !    use stat, only : savg_intvl, ssam_intvl, write_ps, close_stat
-    use modstat, only : savg_intvl, ssam_intvl, write_stat, exit_stat
+    use modstat, only : savg_intvl, ssam_intvl, write_stat, exit_stat ! DAN
     use thrm, only : thermo
     use modparticles, only : lpartic, exit_particles, lpartdump, exitparticledump, &
          lpartstat, exitparticlestat, write_particle_hist, particlestat, &
@@ -94,7 +94,9 @@ contains
     t2      = 0.
     call mpi_get_time(t0)
     call broadcast_dbl(t0, 0)
-    do while (time < timmax .and. (t2-t0) < wctime)
+! Allow one more time step for finally statistical sampling (DAN)
+!    do while (time < timmax .and. (t2-t0) < wctime)
+    do while (time <= timmax .and. (t2-t0) < wctime) ! DAN
        call mpi_get_time(t1)
        istp = istp + 1
 
@@ -111,7 +113,7 @@ contains
        call stathandling
 ! Sample statistics at time step instead of before it (DAN)
 !       if(myid .eq. 0 .and. statflg) print*,'     sampling stat at t=',time+dt
-       if(myid .eq. 0 .and. statflg) print*,'     sampling stat at t=',time
+       if(myid .eq. 0 .and. statflg) print*,'     sampling stat at t=',time ! DAN
 
        call t_step
        ! add time step after saving statistics instead (DAN)
@@ -234,7 +236,7 @@ contains
     use defs, only          : long
 ! Use new statistics interface (DAN)
 !    use stat, only          : savg_intvl, ssam_intvl
-    use modstat, only       : savg_intvl, ssam_intvl
+    use modstat, only       : savg_intvl, ssam_intvl ! DAN
     use modcross, only      : lcross
     use mpi_interface, only : myid
     use modparticles, only  : lpartic,lpartdump,frqpartdump
@@ -266,10 +268,16 @@ contains
       itnlpdump  = (floor(itime/(frqpartdump*tres)) + 1) * ifrqlpdump
 
     ! Limit time step to first event
-    idt = min(itnssam-itime,itnsavg-itime,&                    ! Profile sampling and writing
-               itnanl-itime,itnhist-itime,itncross-itime,&     ! Analysis, history and cross-sections
-               itnlpdump-itime,&                               ! Lagrangian particles
-               int(timmax*tres,long)-itime,idt)                ! End of simulation, current dt
+! Allow a positive time step on last step
+!    idt = min(itnssam-itime,itnsavg-itime,&                    ! Profile sampling and writing
+!               itnanl-itime,itnhist-itime,itncross-itime,&     ! Analysis, history and cross-sections
+!               itnlpdump-itime,&                               ! Lagrangian particles
+!               int(timmax*tres,long)-itime,idt)                ! End of simulation, current dt
+    if (time < timmax) idt = min(itnssam-itime,itnsavg-itime,&                    ! Profile sampling and writing
+                                  itnanl-itime,itnhist-itime,itncross-itime,&     ! Analysis, history and cross-sections
+                                  itnlpdump-itime,&                               ! Lagrangian particles
+                                  int(timmax*tres,long)-itime,idt)                ! End of simulation, current dt
+
 
     ! And back to normal seconds
     dt   = idt  / tres
@@ -332,6 +340,7 @@ contains
          lwaterbudget, a_xt2
 ! Disable old statistic interace (DAN)
 !    use stat, only : sflg, statistics
+    use modstat, only : stat ! DAN
     use sgsm, only : diffuse
     !use sgsm_dyn, only : calc_cs
     use srfc, only : surface
@@ -366,7 +375,7 @@ contains
 !       if (statflg .and. nstep.eq.3) then
 !          sflg = .True.
 !       end if
-       sflg = statflg .and. nstep == 1
+       sflg = statflg .and. nstep == 1 ! DAN
 
        if (lpartic) then
          call particles(time,timmax)

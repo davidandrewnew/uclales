@@ -44,6 +44,7 @@ module mpi_interface
   integer :: wrxid, wryid, nxprocs, nyprocs
   integer, allocatable, dimension(:) :: xoffset, yoffset, nxpa, nypa, &
        nynza, nxnza
+  integer :: MY_INT ! DAN
 
   ! these are the parameters used in the alltoallw2 call in the fft
 
@@ -84,8 +85,10 @@ contains
     select case(kind(0))
     case (4)
        intsize=4
+       MY_INT = MPI_INTEGER4 ! DAN
     case (8)
        intsize=8
+       MY_INT = MPI_INTEGER8 ! DAN 
     case default
        stop "int kind not supported"
     end select

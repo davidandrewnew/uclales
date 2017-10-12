@@ -64,7 +64,7 @@ contains
   !
   subroutine int0D_par_max(xxl, xxg)
     use mpi
-    use mpi_interface, only : intsize
+    use mpi_interface, only : MY_INT
     implicit none
 
     integer, intent(out) :: xxg
@@ -72,7 +72,7 @@ contains
 
     integer :: ierror
 
-    call mpi_allreduce(xxl, xxg, 1, intsize, MPI_MAX, MPI_COMM_WORLD, ierror)
+    call mpi_allreduce(xxl, xxg, 1, MY_INT, MPI_MAX, MPI_COMM_WORLD, ierror)
 
   end subroutine int0D_par_max
 
@@ -156,14 +156,14 @@ contains
   !
   subroutine int0D_par_sum(xxl, xxg)
     use mpi
-    use mpi_interface, only : intsize
+    use mpi_interface, only : MY_INT
     implicit none
 
     integer, intent(out) :: xxg
     integer, intent(in)  :: xxl
     integer              :: ierror
 
-    call mpi_allreduce(xxl, xxg, 1, intsize, MPI_SUM, MPI_COMM_WORLD, ierror)
+    call mpi_allreduce(xxl, xxg, 1, MY_INT, MPI_SUM, MPI_COMM_WORLD, ierror)
 
   end subroutine int0D_par_sum
 
@@ -172,7 +172,7 @@ contains
   !
   subroutine int1D_par_sum(xxl, xxg, n)
     use mpi
-    use mpi_interface, only : intsize 
+    use mpi_interface, only : MY_INT
     implicit none
 
     integer, intent(in)  :: n
@@ -180,7 +180,7 @@ contains
     integer, intent(in)  :: xxl(:)
     integer              :: ierror
 
-    call mpi_allreduce(xxl, xxg, n, intsize, MPI_SUM, MPI_COMM_WORLD, ierror)
+    call mpi_allreduce(xxl, xxg, n, MY_INT, MPI_SUM, MPI_COMM_WORLD, ierror)
 
   end subroutine int1D_par_sum
 
