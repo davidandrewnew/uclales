@@ -294,7 +294,7 @@ contains
                 else
                    rtt(k,i,j) = rtt(k,i,j)  + .3456/8.64e7
                 end if
-             enddo
+1             enddo
           enddo
        enddo
 

@@ -96,7 +96,7 @@ contains
     call broadcast_dbl(t0, 0)
 ! Allow one more time step for finally statistical sampling (DAN)
 !    do while (time < timmax .and. (t2-t0) < wctime)
-    do while (time <= timmax .and. (t2-t0) < wctime) ! DAN
+    do while (time <= timmax+dtlong .and. (t2-t0) < wctime) ! DAN
        call mpi_get_time(t1)
        istp = istp + 1
 
@@ -136,14 +136,14 @@ contains
        !if(lpartic .and. lpartstat .and. statflg .and. (savgflg .eqv. .false.)) call particlestat(.false.,time+dt)
 
        if(savgflg) then
-! Disable old statistic interace (DAN)
-!         if(myid==0) print*,'     profiles at time=',time
+         if(myid==0) print*,'     profiles at time=',time
+! Use new stat interface (DAN)
 !         call write_ps(nzp,dn0,u0,v0,zm,zt,time)
-         call write_stat(time)
+         call write_stat(time) ! DAN
          if (lpartic .and. lpartstat) call particlestat(.true.,time)
        end if
 
-       time = time + dt ! add time step after saving statistics instead (DAN)
+       time = time + dt ! add time step after writing statistics instead (DAN)
 
        if (hisflg) then
          if(myid==0) print*,'     history at time=',time
@@ -174,7 +174,6 @@ contains
        anlflg    = .false.
        crossflg  = .false.
        lpdumpflg = .false.
-       
        
        ! REMOVE THIS?
        !irina
@@ -268,16 +267,14 @@ contains
       itnlpdump  = (floor(itime/(frqpartdump*tres)) + 1) * ifrqlpdump
 
     ! Limit time step to first event
-! Allow a positive time step on last step
 !    idt = min(itnssam-itime,itnsavg-itime,&                    ! Profile sampling and writing
 !               itnanl-itime,itnhist-itime,itncross-itime,&     ! Analysis, history and cross-sections
 !               itnlpdump-itime,&                               ! Lagrangian particles
 !               int(timmax*tres,long)-itime,idt)                ! End of simulation, current dt
-    if (time < timmax) idt = min(itnssam-itime,itnsavg-itime,&                    ! Profile sampling and writing
-                                  itnanl-itime,itnhist-itime,itncross-itime,&     ! Analysis, history and cross-sections
-                                  itnlpdump-itime,&                               ! Lagrangian particles
-                                  int(timmax*tres,long)-itime,idt)                ! End of simulation, current dt
-
+    ! Allow positive timestep on final step (DAN)
+    idt = min(itnssam-itime,itnsavg-itime,&                    ! Profile sampling and writing
+               itnanl-itime,itnhist-itime,itncross-itime,&     ! Analysis, history and cross-sections
+               itnlpdump-itime,idt)                            ! Lagrangian particles, current dt
 
     ! And back to normal seconds
     dt   = idt  / tres
@@ -299,24 +296,20 @@ contains
       statflg    = .true.
     end if
 !    if(mod(itime+idt,isavg_intvl) .eq. 0) then
-    if(mod(itime,isavg_intvl) .eq. 0) then ! DAN
+    if(mod(itime,isavg_intvl) .eq. 0) then
       statflg    = .true.
       savgflg    = .true.
     end if
-!    if(mod(itime+idt,ifrqanl)     .eq. 0) then
-    if(mod(itime,ifrqanl)     .eq. 0) then ! DAN
+    if(mod(itime+idt,ifrqanl)     .eq. 0) then
       anlflg     = .true.
     end if
-!    if(mod(itime+idt,ifrqhis)     .eq. 0) then
-    if(mod(itime,ifrqhis)     .eq. 0) then ! DAN
+    if(mod(itime+idt,ifrqhis)     .eq. 0) then
       hisflg     = .true.
     end if
-!    if((mod(itime+idt,ifrqcross)   .eq. 0) .and. lcross) then
-    if((mod(itime,ifrqcross)   .eq. 0) .and. lcross) then ! DAN
+    if((mod(itime+idt,ifrqcross)   .eq. 0) .and. lcross) then
       crossflg   = .true.
     end if
-!    if((mod(itime+idt,ifrqlpdump)  .eq. 0) .and. lpartic .and. lpartdump) then
-    if((mod(itime,ifrqlpdump)  .eq. 0) .and. lpartic .and. lpartdump) then ! DAN
+    if((mod(itime+idt,ifrqlpdump)  .eq. 0) .and. lpartic .and. lpartdump) then
       lpdumpflg  = .true.
     end if
 

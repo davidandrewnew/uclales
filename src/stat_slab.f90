@@ -26,7 +26,9 @@ real, dimension(:), pointer :: u1, v1, t1, q1, l1, th1, b1, qv1, &
                                u1_s, v1_s, t1_s, q1_s, l1_s, th1_s, b1_s, qv1_s, &
                                u2, v2, w2, t2, q2, l2, uw, vw, tw, qw, lw, tq, b2, bw, th2, qv2, thqv, &
                                u2_s, v2_s, w2_s, t2_s, q2_s, l2_s, uw_s, vw_s, tw_s, qw_s, lw_s, tq_s, b2_s, &
-                               bw_s, th2_s, qv2_s, thqv_s  
+                               bw_s, th2_s, qv2_s, thqv_s, &
+                               w3_s, t2w_s, q2w_s, b2w_s, tw2_s, qw2_s, bw2_s, &
+                               w3, t2w, q2w, b2w, tw2, qw2, bw2
 real, dimension(:,:), allocatable, target :: x1, x2, x1_s, x2_s, x1_scratch
 
 contains
@@ -43,6 +45,7 @@ contains
 
     ! Create statistics file
     call create_stat_file(trim(filprf)//'.stat.slab.nc', ncid, irec)
+    call create_stat_var(ncid, 'n', zt_name, my_nf90_int)
 
     ! Create first-order moment variables
     nstats_1 = 3
@@ -63,23 +66,30 @@ contains
     
     ! Create second-order moment variables
     nstats_2 = 7
-    call create_stat_var(ncid, 'u2', zt_name, my_nf90_real)
-    call create_stat_var(ncid, 'v2', zt_name, my_nf90_real)
-    call create_stat_var(ncid, 'w2', zt_name, my_nf90_real)
-    call create_stat_var(ncid, 't2', zt_name, my_nf90_real)
-    call create_stat_var(ncid, 'uw', zm_name, my_nf90_real)
-    call create_stat_var(ncid, 'vw', zm_name, my_nf90_real)
-    call create_stat_var(ncid, 'tw', zm_name, my_nf90_real)
+    call create_stat_var(ncid, 'u2',  zt_name, my_nf90_real)
+    call create_stat_var(ncid, 'v2',  zt_name, my_nf90_real)
+    call create_stat_var(ncid, 'w2',  zt_name, my_nf90_real)
+    call create_stat_var(ncid, 't2',  zt_name, my_nf90_real)
+    call create_stat_var(ncid, 'uw',  zm_name, my_nf90_real)
+    call create_stat_var(ncid, 'vw',  zm_name, my_nf90_real)
+    call create_stat_var(ncid, 'tw',  zm_name, my_nf90_real)
+    call create_stat_var(ncid, 'w3',  zm_name, my_nf90_real)
+    call create_stat_var(ncid, 't2w', zm_name, my_nf90_real)
+    call create_stat_var(ncid, 'tw2', zm_name, my_nf90_real)
     if (level >= 1) then
-       nstats_2 = nstats_2 + 8
+       nstats_2 = nstats_2 + 15
        call create_stat_var(ncid, 'q2',   zt_name, my_nf90_real)
-       call create_stat_var(ncid, 'qw',   zm_name, my_nf90_real)
-       call create_stat_var(ncid, 'tq',   zt_name, my_nf90_real)
        call create_stat_var(ncid, 'b2',   zt_name, my_nf90_real)
-       call create_stat_var(ncid, 'bw',   zm_name, my_nf90_real)
        call create_stat_var(ncid, 'th2',  zt_name, my_nf90_real)
        call create_stat_var(ncid, 'qv2',  zt_name, my_nf90_real)
+       call create_stat_var(ncid, 'tq',   zt_name, my_nf90_real)
        call create_stat_var(ncid, 'thqv', zt_name, my_nf90_real)
+       call create_stat_var(ncid, 'qw',   zm_name, my_nf90_real)
+       call create_stat_var(ncid, 'bw',   zm_name, my_nf90_real)
+       call create_stat_var(ncid, 'q2w',  zm_name, my_nf90_real)
+       call create_stat_var(ncid, 'b2w',  zm_name, my_nf90_real)
+       call create_stat_var(ncid, 'qw2',  zm_name, my_nf90_real)
+       call create_stat_var(ncid, 'bw2',  zm_name, my_nf90_real)
     end if
     if (level >= 2) then
        nstats_2 = nstats_2 + 2
@@ -116,49 +126,63 @@ contains
     ! Allocate memory for second-order moment statistics
     allocate(x2(nzp,nstats_2))
     x2(:,:) = 0.
-    u2 => x2(:,1)
-    v2 => x2(:,2)
-    w2 => x2(:,3)
-    t2 => x2(:,4)
-    uw => x2(:,5)
-    vw => x2(:,6)
-    tw => x2(:,7)
+    u2  => x2(:,1)
+    v2  => x2(:,2)
+    w2  => x2(:,3)
+    t2  => x2(:,4)
+    uw  => x2(:,5)
+    vw  => x2(:,6)
+    tw  => x2(:,7)
+    w3  => x2(:,8)
+    t2w => x2(:,9)
+    tw2 => x2(:,10)
     if (level >= 1) then
-       q2   => x2(:,8)
-       qw   => x2(:,9)
-       tq   => x2(:,10)
-       b2   => x2(:,11)
-       bw   => x2(:,12)
-       th2  => x2(:,13)
-       qv2  => x2(:,14)
-       thqv => x2(:,15)
+       q2   => x2(:,11)
+       qw   => x2(:,12)
+       tq   => x2(:,13)
+       b2   => x2(:,14)
+       bw   => x2(:,15)
+       th2  => x2(:,16)
+       qv2  => x2(:,17)
+       thqv => x2(:,18)
+       q2w  => x2(:,19)       
+       b2w  => x2(:,20)
+       qw2  => x2(:,21)
+       bw2  => x2(:,22)
     end if
     if (level >= 2) then
-       l2 => x2(:,16)
-       lw => x2(:,17)
+       l2 => x2(:,23)
+       lw => x2(:,24)
     end if
 
     allocate(x2_s(nzp,nstats_2))
-    u2_s => x2_s(:,1)
-    v2_s => x2_s(:,2)
-    w2_s => x2_s(:,3)
-    t2_s => x2_s(:,4)
-    uw_s => x2_s(:,5)
-    vw_s => x2_s(:,6)
-    tw_s => x2_s(:,7)
+    u2_s  => x2_s(:,1)
+    v2_s  => x2_s(:,2)
+    w2_s  => x2_s(:,3)
+    t2_s  => x2_s(:,4)
+    uw_s  => x2_s(:,5)
+    vw_s  => x2_s(:,6)
+    tw_s  => x2_s(:,7)
+    w3_s  => x2_s(:,8)
+    t2w_s => x2_s(:,9)
+    tw2_s => x2_s(:,10)
     if (level >= 1) then
-       q2_s   => x2_s(:,8)
-       qw_s   => x2_s(:,9)
-       tq_s   => x2_s(:,10)
-       b2_s   => x2_s(:,11)
-       bw_s   => x2_s(:,12)
-       th2_s  => x2_s(:,13)
-       qv2_s  => x2_s(:,14)
-       thqv_s => x2_s(:,15)
+       q2_s   => x2_s(:,11)
+       qw_s   => x2_s(:,12)
+       tq_s   => x2_s(:,13)
+       b2_s   => x2_s(:,14)
+       bw_s   => x2_s(:,15)
+       th2_s  => x2_s(:,16)
+       qv2_s  => x2_s(:,17)
+       thqv_s => x2_s(:,18)
+       q2w_s  => x2_s(:,19)       
+       b2w_s  => x2_s(:,20)
+       qw2_s  => x2_s(:,21)
+       bw2_s  => x2_s(:,22)
     end if
     if (level >= 2) then
-       l2_s => x2_s(:,16)
-       lw_s => x2_s(:,17)
+       l2_s => x2_s(:,23)
+       lw_s => x2_s(:,24)
     end if
 
     ! Sample counts
@@ -202,26 +226,34 @@ contains
     call par_sum(x1_s, x1_scratch, nzp*nstats_1)
     x1_s(:,:) = x1_scratch(:,:)/real(n_s_global)    
 
-    ! Sample second-order statistics
+    ! Sample high-order statistics
     x2_s(:,:) = 0.
     do j = 3,nyp-2
     do i = 3,nxp-2
        do k = 2,nzp-1
-          u2_s(k) = u2_s(k) + (a_up(k,i,j) - u1_s(k))**2.
-          v2_s(k) = v2_s(k) + (a_vp(k,i,j) - v1_s(k))**2.
-          t2_s(k) = t2_s(k) + (a_tp(k,i,j) - t1_s(k))**2.
-          uw_s(k) = uw_s(k) + a_wp(k,i,j)*(0.5*(a_up(k,i,j) + a_up(k+1,i,j)) - 0.5*(u1_s(k) + u1_s(k+1)))
-          vw_s(k) = vw_s(k) + a_wp(k,i,j)*(0.5*(a_vp(k,i,j) + a_vp(k+1,i,j)) - 0.5*(v1_s(k) + v1_s(k+1)))
-          tw_s(k) = tw_s(k) + a_wp(k,i,j)*(0.5*(a_tp(k,i,j) + a_tp(k+1,i,j)) - 0.5*(t1_s(k) + t1_s(k+1)))
+          u2_s(k)  = u2_s(k)  + (a_up(k,i,j) - u1_s(k))**2.
+          v2_s(k)  = v2_s(k)  + (a_vp(k,i,j) - v1_s(k))**2.
+          w2_s(k)  = w2_s(k)  + a_wp(k,i,j)**2.
+          t2_s(k)  = t2_s(k)  + (a_tp(k,i,j) - t1_s(k))**2.
+          uw_s(k)  = uw_s(k)  + a_wp(k,i,j)*(0.5*(a_up(k,i,j) + a_up(k+1,i,j)) - 0.5*(u1_s(k) + u1_s(k+1)))
+          vw_s(k)  = vw_s(k)  + a_wp(k,i,j)*(0.5*(a_vp(k,i,j) + a_vp(k+1,i,j)) - 0.5*(v1_s(k) + v1_s(k+1)))
+          tw_s(k)  = tw_s(k)  + a_wp(k,i,j)*(0.5*(a_tp(k,i,j) + a_tp(k+1,i,j)) - 0.5*(t1_s(k) + t1_s(k+1)))
+          w3_s(k)  = w3_s(k)  + a_wp(k,i,j)**3.
+          t2w_s(k) = t2w_s(k) + a_wp(k,i,j)*(0.5*(a_tp(k,i,j) + a_tp(k+1,i,j)) - 0.5*(t1_s(k) + t1_s(k+1)))**2.
+          tw2_s(k) = tw2_s(k) + a_wp(k,i,j)**2.*(0.5*(a_tp(k,i,j) + a_tp(k+1,i,j)) - 0.5*(t1_s(k) + t1_s(k+1)))
           if (level >= 1) then
-             q2_s(k)    = q2_s(k)   + (a_rp(k,i,j) - q1_s(k))**2.
-             qw_s(k)    = qw_s(k)   + a_wp(k,i,j)*(0.5*(a_rp(k,i,j) + a_rp(k+1,i,j)) - 0.5*(q1_s(k) + q1_s(k+1)))
-             tq_s(k)    = tq_s(k)   + (a_tp(k,i,j) - t1_s(k))*(a_rp(k,i,j) - q1_s(k))
-             b2_s(k)    = b2_s(k)   + (a_b(k,i,j) - b1_s(k))**2.
-             bw_s(k)    = bw_s(k)   + a_wp(k,i,j)*(0.5*(a_b(k,i,j) + a_b(k+1,i,j)) - 0.5*(b1_s(k) + b1_s(k+1)))
-             th2_s(k)   = th2_s(k)  + (a_theta(k,i,j) - th1_s(k))**2.
-             qv2_s(k)   = qv2_s(k)  + (vapor(k,i,j) - qv1_s(k))**2.
-             thqv_s(k)  = thqv_s(k) + (a_theta(k,i,j) - th1_s(k))*(vapor(k,i,j) - qv1_s(k))
+             q2_s(k)   = q2_s(k)   + (a_rp(k,i,j) - q1_s(k))**2.
+             qw_s(k)   = qw_s(k)   + a_wp(k,i,j)*(0.5*(a_rp(k,i,j) + a_rp(k+1,i,j)) - 0.5*(q1_s(k) + q1_s(k+1)))
+             tq_s(k)   = tq_s(k)   + (a_tp(k,i,j) - t1_s(k))*(a_rp(k,i,j) - q1_s(k))
+             b2_s(k)   = b2_s(k)   + (a_b(k,i,j) - b1_s(k))**2.
+             bw_s(k)   = bw_s(k)   + a_wp(k,i,j)*(0.5*(a_b(k,i,j) + a_b(k+1,i,j)) - 0.5*(b1_s(k) + b1_s(k+1)))
+             th2_s(k)  = th2_s(k)  + (a_theta(k,i,j) - th1_s(k))**2.
+             qv2_s(k)  = qv2_s(k)  + (vapor(k,i,j) - qv1_s(k))**2.
+             thqv_s(k) = thqv_s(k) + (a_theta(k,i,j) - th1_s(k))*(vapor(k,i,j) - qv1_s(k))
+             q2w_s(k)  = q2w_s(k)  + a_wp(k,i,j)*(0.5*(a_rp(k,i,j) + a_rp(k+1,i,j)) - 0.5*(q1_s(k) + q1_s(k+1)))**2.
+             b2w_s(k)  = b2w_s(k)  + a_wp(k,i,j)*(0.5*(a_b(k,i,j) + a_b(k+1,i,j)) - 0.5*(b1_s(k) + b1_s(k+1)))**2.
+             qw2_s(k)  = qw2_s(k)  + a_wp(k,i,j)**2.*(0.5*(a_rp(k,i,j) + a_rp(k+1,i,j)) - 0.5*(q1_s(k) + q1_s(k+1)))
+             bw2_s(k)  = bw2_s(k)  + a_wp(k,i,j)**2.*(0.5*(a_b(k,i,j) + a_b(k+1,i,j)) - 0.5*(b1_s(k) + b1_s(k+1)))
           end if
           if (level >= 2) then
              l2_s(k) = l2_s(k) + (liquid(k,i,j) - l1_s(k))**2.
@@ -232,8 +264,19 @@ contains
     end do
     x2_s(:,:) = x2_s(:,:)/real(n_s_local)
 
-    ! Update second-order statistics
+    ! Update third-order statistics
     f_local = real(n_s_local)/real(n_s_local + n_local)
+    w3(:)  = f_local*w3_s(:)  + (1. - f_local)*w3(:)
+    t2w(:) = f_local*t2w_s(:) + (1. - f_local)*t2w(:) + 2.*f_local*(1. - f_local)*(t1_s(:) - t1(:))*(tw_s(:) - tw(:))
+    tw2(:) = f_local*tw2_s(:) + (1. - f_local)*tw2(:) + f_local*(1. - f_local)*(t1_s(:) - t1(:))*(w2_s(:) - w2(:))
+    if (level >= 1) then
+       q2w(:) = f_local*q2w_s(:) + (1. - f_local)*q2w(:) + 2.*f_local*(1. - f_local)*(q1_s(:) - q1(:))*(qw_s(:) - qw(:))
+       b2w(:) = f_local*b2w_s(:) + (1. - f_local)*b2w(:) + 2.*f_local*(1. - f_local)*(b1_s(:) - b1(:))*(bw_s(:) - bw(:))
+       qw2(:) = f_local*qw2_s(:) + (1. - f_local)*qw2(:) + f_local*(1. - f_local)*(q1_s(:) - q1(:))*(w2_s(:) - w2(:))
+       bw2(:) = f_local*bw2_s(:) + (1. - f_local)*bw2(:) + f_local*(1. - f_local)*(b1_s(:) - b1(:))*(w2_s(:) - w2(:))
+    end if
+
+    ! Update second-order statistics
     u2(:) = f_local*u2_s(:) + (1. - f_local)*u2(:) + f_local*(1. - f_local)*(u1_s(:) - u1(:))**2.
     v2(:) = f_local*v2_s(:) + (1. - f_local)*v2(:) + f_local*(1. - f_local)*(v1_s(:) - v1(:))**2.
     w2(:) = f_local*w2_s(:) + (1. - f_local)*w2(:)
@@ -255,11 +298,13 @@ contains
        l2(:) = f_local*l2_s(:) + (1. - f_local)*l2(:) + f_local*(1. - f_local)*(l1_s(:) - l1(:))**2.
        lw(:) = f_local*lw_s(:) + (1. - f_local)*lw(:)
     end if
-    n_local = n_local + n_s_local
 
     ! Update first-order statistics
     f_global = real(n_s_global)/real(n_s_global + n_global)
     x1(:,:)  = f_global*x1_s(:,:) + (1. - f_global)*x1(:,:)
+
+    ! Update sample count
+    n_local  = n_local + n_s_local
     n_global = n_global + n_s_global
 
   end subroutine stat_slab
@@ -269,11 +314,17 @@ contains
   !
   subroutine write_stat_slab(time, fsttm, nsmp)
     use modstat_io, only : write_stat_var, advance_stat_time
-    use grid, only       : level, umean, vmean, th00
+    use grid, only       : level, umean, vmean, th00, nzp
     implicit none
 
     real, intent(in)     :: time, fsttm
     integer, intent(in)  :: nsmp
+
+    integer, allocatable :: n_array(:)
+
+    !
+    allocate(n_array(nzp))
+    n_array(:) = n_local
 
     ! Add mean state
     u1(:) = u1(:) + umean
@@ -284,9 +335,10 @@ contains
     call advance_stat_time(time, fsttm, nsmp, ncid, irec)
 
     ! Write statistics
-    call write_stat_var(ncid, 'u', u1, irec)
-    call write_stat_var(ncid, 'v', v1, irec)
-    call write_stat_var(ncid, 't', t1, irec)
+    call write_stat_var(ncid, 'n', n_array, irec)
+    call write_stat_var(ncid, 'u', u1,      irec)
+    call write_stat_var(ncid, 'v', v1,      irec)
+    call write_stat_var(ncid, 't', t1,      irec)
     if (level >= 1) then
        call write_stat_var(ncid, 'q',  q1,  irec)
        call write_stat_var(ncid, 'b',  b1,  irec)
@@ -296,6 +348,7 @@ contains
     if (level >= 2) call write_stat_var(ncid, 'l', l1, irec)
     call write_stat_var(ncid, 'u2', u2, irec)
     call write_stat_var(ncid, 'v2', v2, irec)
+    call write_stat_var(ncid, 'w2', w2, irec)
     call write_stat_var(ncid, 't2', t2, irec)
     call write_stat_var(ncid, 'uw', uw, irec)
     call write_stat_var(ncid, 'vw', vw, irec)
@@ -313,6 +366,15 @@ contains
     if (level >= 2) then
        call write_stat_var(ncid, 'l2', l2, irec)
        call write_stat_var(ncid, 'lw', lw, irec)
+    end if
+    call write_stat_var(ncid, 'w3',  w3,  irec)
+    call write_stat_var(ncid, 't2w', t2w, irec)
+    call write_stat_var(ncid, 'tw2', tw2,  irec)
+    if (level >= 2) then
+       call write_stat_var(ncid, 'q2w', q2w, irec)
+       call write_stat_var(ncid, 'qw2', qw2, irec)
+       call write_stat_var(ncid, 'b2w', b2w, irec)
+       call write_stat_var(ncid, 'bw2', bw2, irec)
     end if
 
     ! Reset statistics computation
