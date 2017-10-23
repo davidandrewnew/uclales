@@ -100,7 +100,8 @@ contains
        call mpi_get_time(t1)
        istp = istp + 1
 
-       ! Repositioned CFL checking to avoid too long of time step on initial time step (DAN) 
+       ! Do CFL stuff before time step so that it is applied before very first time step.
+       ! Otherwise, dtlong must be small.
        call cfl(cflmax)
        call double_scalar_par_max(cflmax,gcflmax)
        cflmax = gcflmax
@@ -111,13 +112,12 @@ contains
        dt = min(dtlong,dt*peak_cfl/(cflmax+epsilon(1.)))
 
        call stathandling
-! Sample statistics at time step instead of before it (DAN)
-!       if(myid .eq. 0 .and. statflg) print*,'     sampling stat at t=',time+dt
+! Sample statistics on first RK timestep rather than last (DAN)
+!       if(myid .eq. 0 .and. statflg) print*,'     sampling stat at t=',time+dt 
        if(myid .eq. 0 .and. statflg) print*,'     sampling stat at t=',time ! DAN
 
        call t_step
-       ! add time step after saving statistics instead (DAN)
-!       time = time + dt
+       time = time + dt
 
 ! DAN
 !!$       call cfl(cflmax)
@@ -140,10 +140,9 @@ contains
 ! Use new stat interface (DAN)
 !         call write_ps(nzp,dn0,u0,v0,zm,zt,time)
          call write_stat(time) ! DAN
-         if (lpartic .and. lpartstat) call particlestat(.true.,time)
+! DAN
+!         if (lpartic .and. lpartstat) call particlestat(.true.,time)
        end if
-
-       time = time + dt ! add time step after writing statistics instead (DAN)
 
        if (hisflg) then
          if(myid==0) print*,'     history at time=',time
@@ -209,7 +208,8 @@ contains
       call write_particle_hist(1, time)
       call exit_particles
       if(lpartdump) call exitparticledump
-      if(lpartstat) call exitparticlestat
+! DAN
+!      if(lpartstat) call exitparticlestat
     end if
 
     if (lcross) call exitcross
@@ -289,15 +289,14 @@ contains
     lpdumpflg= .false.
 
 !
-! Add time step after saving statistics instead (DAN)
-!
+! Sample statistics on first RK timestep rather than last (DAN)
 !    if(mod(itime+idt,issam_intvl) .eq. 0) then
     if(mod(itime,issam_intvl) .eq. 0) then ! DAN
       statflg    = .true.
     end if
-!    if(mod(itime+idt,isavg_intvl) .eq. 0) then
-    if(mod(itime,isavg_intvl) .eq. 0) then
-      statflg    = .true.
+    if(mod(itime+idt,isavg_intvl) .eq. 0) then
+! DAN
+!      statflg    = .true.
       savgflg    = .true.
     end if
     if(mod(itime+idt,ifrqanl)     .eq. 0) then
@@ -333,7 +332,8 @@ contains
          lwaterbudget, a_xt2
 ! Disable old statistic interace (DAN)
 !    use stat, only : sflg, statistics
-    use modstat, only : stat ! DAN
+    use modstat, only : sample_stat, update_stat ! DAN
+    use modstat_slab, only : stat_slab_tendency, stat_slab_misc ! DAN
     use sgsm, only : diffuse
     !use sgsm_dyn, only : calc_cs
     use srfc, only : surface
@@ -364,11 +364,13 @@ contains
        ! updated every 'ssam_intvl' outside the main statistics module
        ! are not updated (summed) in all three RK substeps.
 
-! Add time step after saving statistics instead (DAN)
+! Sample statistics on first RK time step rather than last (DAN)
 !       if (statflg .and. nstep.eq.3) then
 !          sflg = .True.
 !       end if
        sflg = statflg .and. nstep == 1 ! DAN
+
+       if (sflg) call sample_stat(time) ! DAN
 
        if (lpartic) then
          call particles(time,timmax)
@@ -386,6 +388,7 @@ contains
        xtime = xtime + strtim
 
        call diffuse(time)
+       if (sflg) call stat_slab_tendency(1) ! DAN
 
        if (adv=='monotone') then
           call fadvect
@@ -397,6 +400,7 @@ contains
        endif
 
        call ladvect
+       if (sflg) call stat_slab_tendency(2) ! DAN
 
        if (level >= 1) then
           if (lwaterbudget) then
@@ -405,15 +409,22 @@ contains
              call thermo(level)
           end if
           call forcings(xtime,cntlat,sst,div,case_name,time)
+          if (sflg) call stat_slab_tendency(3) ! DAN
           call micro(level,istp)
        end if
 
        call corlos
+       if (sflg) call stat_slab_tendency(4) ! DAN
        call buoyancy
+       if (sflg) then
+          call stat_slab_misc     ! DAN
+          call stat_slab_tendency(5) ! DAN
+       end if
        call sponge
+       if (sflg) call stat_slab_tendency(6) ! DAN
        call decay
 
-       if (sflg) call stat(time) ! Call statistics driver (DAN) 
+       if (sflg) call update_stat ! DAN
 
        call update (nstep)
        call poisson
@@ -691,7 +702,6 @@ contains
 
     use grid, only : a_up, a_vp, a_wp, a_wt, vapor, a_theta, a_scr1, a_scr3,liquid,&
          a_rp,a_rpp,a_ricep, a_rsnowp, a_rgrp, a_rhailp, nxp, nyp, nzp, dzi_m, th00, level, pi1
-    use grid, only : a_b ! Use buoyancy field instead of scratch variable (DAN)
 ! Disable old statistic interace (DAN)
 !    use stat, only : sflg, comp_tke
     use util, only : ae1mm
@@ -705,13 +715,9 @@ contains
     if (level>4) rl = rl + a_rhailp
 
     if(level>0) then
-! Use buoyancy field instead of scratch variable (DAN)
-!      call boyanc(nzp,nxp,nyp,level,a_wt,a_theta,th00,a_scr1,vapor,rl)
-      call boyanc(nzp,nxp,nyp,level,a_wt,a_theta,th00,a_b,vapor,rl) ! DAN
+      call boyanc(nzp,nxp,nyp,level,a_wt,a_theta,th00,a_scr1,vapor,rl)
     else
-! Use buoyancy field instead of scratch variable (DAN)
-!      call boyanc(nzp,nxp,nyp,level,a_wt,a_theta,th00,a_scr1)
-      call boyanc(nzp,nxp,nyp,level,a_wt,a_theta,th00,a_b) ! DAN
+      call boyanc(nzp,nxp,nyp,level,a_wt,a_theta,th00,a_scr1) 
     end if
 
     call ae1mm(nzp,nxp,nyp,a_wt,awtbar)

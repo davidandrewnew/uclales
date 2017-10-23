@@ -14,16 +14,19 @@
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 !
-! Copyright 2015-2016, David A. New
+! Copyright 2015-2017, David A. New
 !----------------------------------------------------------------------------
 
 module modstat_io
   implicit none
 
+  integer, parameter :: ntypes = 7
+
   character(*), parameter :: time_name = 'time'
   character(*), parameter :: rank_name = 'rank'
   character(*), parameter :: zt_name   = 'zt'
   character(*), parameter :: zm_name   = 'zm'
+  character(*), parameter :: type_name = 'type'
 
   interface create_stat_var
      module procedure create_stat_var_0d
@@ -33,6 +36,7 @@ module modstat_io
   interface write_stat_var
      module procedure write_stat_real_var_0d
      module procedure write_stat_real_var_1d
+     module procedure write_stat_real_var_2d
      module procedure write_stat_int_var_1d
   end interface
 
@@ -51,8 +55,8 @@ contains
     character(*), intent(in) :: name
     integer, intent(out)     :: ncid, irec
 
-    integer              :: irank
-    integer, allocatable :: rank_values(:)
+    integer              :: i
+    integer, allocatable :: rank_values(:), type_values(:)
 
     ! Create file
     call create_file(name, ncid)
@@ -63,16 +67,22 @@ contains
     ! Create rank dimension if using MPI
     if (pecount > 1) then
        allocate(rank_values(pecount))
-       do irank = 1,pecount
-          rank_values(irank) = irank
+       do i = 1,pecount
+          rank_values(i) = i
        end do
-
        call create_dim(ncid, rank_name, rank_values)
     end if
 
     ! Define altitude dimensions
     call create_dim(ncid, zt_name, zt)
     call create_dim(ncid, zm_name, zm)
+    
+    !
+    allocate(type_values(ntypes))
+    do i = 1,ntypes
+       type_values(i) = i
+    end do
+    call create_dim(ncid, type_name, type_values)
 
     ! Create non-time-dependant parameters for simulation parameters
     call create_var(ncid, 'dn0',   (/zt_name/), my_nf90_real)
@@ -103,42 +113,61 @@ contains
   end subroutine create_stat_file
 
   !
-  ! create_stat_var_1d
+  ! create_stat_var_0d
   !
-  subroutine create_stat_var_1d(ncid, var_name, dim_name, type)
+  subroutine create_stat_var_0d(ncid, var_name, data_type)
     use netcdf_interface, only : create_var, create_dim
     use mpi_interface, only    : pecount
     implicit none
 
-    integer, intent(in)           :: ncid, type
-    character(*), intent(in)      :: var_name, dim_name
+    integer, intent(in)      :: ncid, data_type
+    character(*), intent(in) :: var_name
 
     if (pecount == 1) then
-       call create_var(ncid, var_name, (/dim_name, time_name/), type)
+       call create_var(ncid, var_name, (/time_name/), data_type)
     else
-       call create_var(ncid, var_name, (/dim_name, rank_name, time_name/), type)
+       call create_var(ncid, var_name, (/rank_name, time_name/), data_type)
+    end if
+
+  end subroutine create_stat_var_0d
+
+  !
+  ! create_stat_var_1d
+  !
+  subroutine create_stat_var_1d(ncid, var_name, z_dim_name, data_type)
+    use netcdf_interface, only : create_var, create_dim
+    use mpi_interface, only    : pecount
+    implicit none
+
+    integer, intent(in)      :: ncid, data_type
+    character(*), intent(in) :: var_name, z_dim_name
+
+    if (pecount == 1) then
+       call create_var(ncid, var_name, (/z_dim_name, time_name/), data_type)
+    else
+       call create_var(ncid, var_name, (/z_dim_name, rank_name, time_name/), data_type)
     end if
 
   end subroutine create_stat_var_1d
 
   !
-  ! create_stat_var_0d
+  ! create_stat_var_2d
   !
-  subroutine create_stat_var_0d(ncid, var_name, type)
+  subroutine create_stat_var_2d(ncid, var_name, z_dim_name, data_type)
     use netcdf_interface, only : create_var, create_dim
     use mpi_interface, only    : pecount
     implicit none
 
-    integer, intent(in)           :: ncid, type
-    character(*), intent(in)      :: var_name
+    integer, intent(in)      :: ncid, data_type
+    character(*), intent(in) :: var_name, z_dim_name
 
     if (pecount == 1) then
-       call create_var(ncid, var_name, (/time_name/), type)
+       call create_var(ncid, var_name, (/z_dim_name, type_name, time_name/), data_type)
     else
-       call create_var(ncid, var_name, (/rank_name, time_name/), type)
+       call create_var(ncid, var_name, (/z_dim_name, type_name, rank_name, time_name/), data_type)
     end if
 
-  end subroutine create_stat_var_0d
+  end subroutine create_stat_var_2d
 
   !
   ! advance_stat_time
@@ -224,6 +253,33 @@ contains
   end subroutine write_stat_real_var_1d
 
   !
+  ! write_stat_real_var_2d
+  !
+  subroutine write_stat_real_var_2d(ncid, name, var, irec)
+    use mpi_interface, only    : pecount, myid
+    use grid, only             : nzp
+    use netcdf_interface, only : write_var
+    implicit none
+    
+    integer, intent(in)      :: ncid, irec
+    character(*), intent(in) :: name
+    real, intent(in)         :: var(:,:)
+
+    real, allocatable :: var_copy(:,:)
+
+    ! Because Parallel NetCDF does not allow intent(in) variables
+    allocate(var_copy(nzp,ntypes))
+    var_copy(:,:) = var(:,:)
+
+    if (pecount == 1) then
+       call write_var(ncid, name, var_copy, irec)
+    else
+       call write_var(ncid, name, var_copy, irec, start_in=(/1, 1, myid+1/), stride_in=(/nzp, ntypes, 1/))
+    end if
+
+  end subroutine write_stat_real_var_2d
+
+  !
   ! write_stat_int_var_1d
   !
   subroutine write_stat_int_var_1d(ncid, name, var, irec)
@@ -232,9 +288,9 @@ contains
     use netcdf_interface, only : write_var
     implicit none
     
-    integer, intent(in)           :: ncid, irec
-    character(*), intent(in)      :: name
-    integer, intent(in)           :: var(:)
+    integer, intent(in)      :: ncid, irec
+    character(*), intent(in) :: name
+    integer, intent(in)      :: var(:)
 
     integer, allocatable :: var_copy(:)
 

@@ -100,7 +100,6 @@ module grid
        a_lflxu, a_lflxd, a_sflxu, a_sflxd,a_km, &
        prc_c, prc_r, prc_i, prc_s, prc_g, prc_h , prc_acc,               &
        a_lflxu_ca, a_lflxd_ca, a_sflxu_ca, a_sflxd_ca
-  real, dimension (:,:,:), allocatable :: a_b ! Create buoyancy field
 
   real, dimension (:,:), allocatable :: svctr
   real, dimension (:)  , allocatable :: ssclr
@@ -171,15 +170,13 @@ contains
     memsize = 2*nxyzp ! complex array in pressure solver
 
     allocate (a_theta(nzp,nxp,nyp),a_pexnr(nzp,nxp,nyp),press(nzp,nxp,nyp),a_km(nzp,nxp,nyp))
-    allocate (a_b(nzp,nxp,nyp)) ! DAN
-    a_b(:,:,:) = 0. ! DAN
     a_theta(:,:,:) = 0.
     a_pexnr(:,:,:) = 0.
     press(:,:,:) = 0.
     a_km(:,:,:) = 0.
 ! Should be nxyzp*5, including new buoyancy field variable. 14 may have been a typo of 4. ! DAN
 !    memsize = memsize + nxyzp*14 !
-    memsize = memsize + nxyzp*5 ! DAN
+    memsize = memsize + nxyzp*4 ! DAN
 
     if (level > 0) then
        allocate (vapor(nzp,nxp,nyp))

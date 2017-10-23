@@ -28,6 +28,7 @@ module netcdf_interface
      module procedure write_real_0d
      module procedure write_int_0d
      module procedure write_real_1d
+     module procedure write_real_2d
      module procedure write_int_1d
      module procedure write_byte_1d
   end interface
@@ -447,6 +448,72 @@ module netcdf_interface
       end if
 
     end subroutine write_real_1d
+
+    !
+    ! write_real_2d
+    !
+    subroutine write_real_2d(ncid, name, values, irec, start_in, stride_in)
+      use mpi
+      use pnetcdf, only : nf90mpi_iput_var, nf90mpi_inq_varid, nf90mpi_put_var_all
+      implicit none
+
+      integer, intent(in)            :: ncid
+      character(*), intent(in)       :: name
+      real, intent(inout)            :: values(:,:)
+      integer, intent(in), optional  :: irec, start_in(:), stride_in(:)
+
+      integer                                    :: iret, varid, ndims, ndims_loop
+      integer(kind=MPI_OFFSET_KIND), allocatable :: start(:), stride(:)
+      
+      ! Get variable ID
+      iret = nf90mpi_inq_varid(ncid, trim(name), varid)
+      call handle_error(iret, 'In nf90mpi_inq_varid: ' // trim(name))
+
+      ! Get number of dimensions 
+      if (present(start_in)) then
+         ndims = size(start_in)
+      else 
+         ndims = size(shape(values))
+      end if
+      if (present(irec)) then
+         ndims_loop = ndims
+         ndims      = ndims + 1
+      else
+         ndims_loop = ndims
+      end if
+
+      ! Allocate arrays
+      allocate(start(ndims))
+
+      ! Get starts and strides
+      if (present(start_in)) then
+         start(1:ndims_loop) = int(start_in(1:ndims_loop), MPI_OFFSET_KIND)
+
+         if (present(stride_in)) then
+            allocate(stride(ndims))
+            stride(1:ndims_loop) = int(stride_in(1:ndims_loop), MPI_OFFSET_KIND)
+         end if
+      else
+         start(1:ndims_loop) = 1
+      end if
+      if (present(irec)) then
+         start(ndims) = int(irec, MPI_OFFSET_KIND)
+         if (present(start_in) .and. present(stride_in)) stride(ndims) = 1
+      end if
+
+      ! Ensure collective data mode
+      call collective_data_mode(ncid)
+
+      ! Write variable
+      if (present(stride_in)) then
+         iret = nf90mpi_put_var_all(ncid, varid, values, start, stride)
+         call handle_error(iret, 'In nf90mpi_put_var: ' // trim(name))
+      else
+         iret = nf90mpi_put_var_all(ncid, varid, values, start)
+         call handle_error(iret, 'In nf90mpi_put_var: ' // trim(name))
+      end if
+
+    end subroutine write_real_2d
 
     !
     ! write_int_1d

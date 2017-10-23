@@ -168,7 +168,7 @@ contains
   ! within this routine
   !
   subroutine prs_grad(n1,n2,n3,ix,iy,s1,p,u,v,w,dz,dx,dy,dt)
-
+    use modstat_slab, only : stat_slab_pressure ! DAN
     use mpi_interface, only : cyclics,cyclicc
 
     integer, intent (in) :: n1,n2,n3,ix,iy
@@ -193,6 +193,9 @@ contains
     enddo
     call cyclics(n1,n2,n3,p,req)
     call cyclicc(n1,n2,n3,p,req)
+
+    ! DAN
+    call stat_slab_pressure(7, p/dt)
 
 ! Pressure in following calculation contains a timestep term
 

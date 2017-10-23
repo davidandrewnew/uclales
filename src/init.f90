@@ -62,9 +62,8 @@ contains
     use modcross, only : initcross, triggercross
     use grid, only : nzp, dn0, u0, v0, zm, zt, isfctyp
     use modparticles, only: init_particles, lpartic, lpartdump, lpartstat, initparticledump, initparticlestat, write_particle_hist, particlestat
-
     use netcdf_interface, only : init_netcdf_interface ! DAN
-    use modstat, only          : init_stat, stat, write_stat ! DAN
+    use modstat, only          : init_stat ! DAN
 
     implicit none
 
@@ -127,7 +126,7 @@ contains
      ! Initialize NetCDF interface (DAN)
      call init_netcdf_interface
 
-     ! Initialize statistics (DAN)
+     ! Initialize statistics interface (DAN)
      call init_stat(time)
 
     if (lpartic) then
@@ -137,7 +136,8 @@ contains
         call init_particles(.true.,hfilin)
       end if
       if(lpartdump) call initparticledump(time)
-      if(lpartstat) call initparticlestat(time)
+! DAN
+!      if(lpartstat) call initparticlestat(time)
     end if
 
     ! write analysis and history files from restart if appropriate
@@ -154,8 +154,9 @@ contains
           ! Sampling and writing of initial statistics handled in step.f90 now (DAN)
           !call statistics (time)
           !call write_ps(nzp,dn0,u0,v0,zm,zt,time)
-          if(lpartic) call particlestat(.false.,time)
-          if(lpartic) call particlestat(.true.,time)
+! DAN
+!          if(lpartic) call particlestat(.false.,time)
+!          if(lpartic) call particlestat(.true.,time)
        else
           call init_anal(time+dt)
           call initcross(time, filprf)

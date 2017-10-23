@@ -48,10 +48,10 @@ contains
   end subroutine init_stat
 
   !
-  ! stat
+  ! sample_stat
   !
-  subroutine stat(time)
-    use modstat_slab, only : stat_slab
+  subroutine sample_stat(time)
+    use modstat_slab, only : sample_stat_slab
     implicit none
     
     real, intent(in) :: time
@@ -60,12 +60,24 @@ contains
     if (nsmp == 0) fsttm = time
 
     ! Grid statistics
-    call stat_slab
+    call sample_stat_slab
 
     ! Increment sample count
     nsmp = nsmp + 1
 
-  end subroutine stat
+  end subroutine sample_stat
+
+  !
+  ! update_stat
+  !
+  subroutine update_stat
+    use modstat_slab, only : update_stat_slab
+    implicit none
+
+    ! Grid statistics
+    call update_stat_slab
+
+  end subroutine update_stat
 
   !
   ! write_stat
