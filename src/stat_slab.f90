@@ -21,7 +21,7 @@ module modstat_slab
 
 implicit none
 
-integer :: ncid, irec, nstats_x1, nstats_x2, nstats_x1_misc, nstats_x2_misc, &
+integer :: ncid, irec, nstats_x1, nstats_x2, nstats_x1_misc, nstats_x2_misc, nstats_x_surf, &
            n_local, n_global, n_s_local, n_s_global
 
 real, dimension(:), pointer :: u1, v1, w1, t1, q1, u1_s, v1_s, w1_s, t1_s, q1_s, &
@@ -31,9 +31,11 @@ real, dimension(:,:), pointer :: ut, vt, wt, tt, qt, ut_s, vt_s, wt_s, tt_s, qt_
                                  u2t, v2t, w2t, t2t, q2t, uwt, vwt, twt, qwt, tqt, &
                                  u2t_s, v2t_s, w2t_s, t2t_s, q2t_s, uwt_s, vwt_s, twt_s, qwt_s, tqt_s
 real, dimension(:), pointer :: b1, N2, th1, l1, b1_s, N2_s, th1_s, l1_s, &
-                               b2, thb, lb, w3, tw2, qw2, bw2, t2w, q2w, b2w, &
-                               b2_s, thb_s, lb_s, w3_s, tw2_s, qw2_s, bw2_s, t2w_s, q2w_s, b2w_s
+                               b2, bw, thb, lb, w3, tw2, qw2, bw2, t2w, q2w, b2w, &
+                               b2_s, bw_s, thb_s, lb_s, w3_s, tw2_s, qw2_s, bw2_s, t2w_s, q2w_s, b2w_s
+real, pointer :: uw_surf1, vw_surf1, tw_surf1, qw_surf1, uw_surf1_s, vw_surf1_s, tw_surf1_s, qw_surf1_s
 
+real, dimension(:), allocatable, target     :: x_surf, x_surf_s
 real, dimension(:,:), allocatable, target   :: x1, x2, x1_misc, x2_misc, x1_s, x2_s, x1_misc_s, x2_misc_s
 real, dimension(:,:,:), allocatable, target :: xt, x2t, xt_s, x2t_s
 
@@ -60,6 +62,16 @@ contains
     ! Create statistics file
     call create_stat_file(trim(filprf)//'.stat.slab.nc', ncid, irec)
     call create_stat_var(ncid, 'n', zt_name, my_nf90_int)
+
+    ! x_surf
+    nstats_x_surf = 2
+    if (level >= 1) nstats_x_surf = nstats_x_surf + 2
+    allocate(x_surf(nstats_x_surf), x_surf_s(nstats_x_surf))
+    x_surf(:) = 0.
+    call create_stat_var(ncid, 'uw_surf', my_nf90_real)
+    call create_stat_var(ncid, 'vw_surf', my_nf90_real)
+    call create_stat_var(ncid, 'tw_surf', my_nf90_real)
+    if (level >= 1) call create_stat_var(ncid, 'qw_surf', my_nf90_real)
 
     ! x1
     nstats_x1 = 4
@@ -132,12 +144,13 @@ contains
     end if
 
     ! x2_misc
-    nstats_x2_misc = 6
+    nstats_x2_misc = 7
     if (level >= 1) nstats_x2_misc = nstats_x2_misc + 2
     if (level >= 2) nstats_x2_misc = nstats_x2_misc + 2
     allocate(x2_misc(nzp,nstats_x2_misc), x2_misc_s(nzp,nstats_x2_misc))
     x2_misc(:,:) = 0.
     call create_stat_var(ncid, 'b2',  zm_name, my_nf90_real)
+    call create_stat_var(ncid, 'bw',  zm_name, my_nf90_real)
     if (level >= 2) then
        call create_stat_var(ncid, 'thb', zm_name, my_nf90_real)
        call create_stat_var(ncid, 'lb',  zm_name, my_nf90_real)
@@ -157,6 +170,18 @@ contains
     ! Sample counts
     n_s_local = (nxp - 4)*(nyp - 4)
     call par_sum(n_s_local, n_s_global)
+
+    ! x_surf
+    uw_surf1 => x_surf(1)
+    vw_surf1 => x_surf(2)
+    tw_surf1 => x_surf(3)
+    if (level >= 1) qw_surf1 => x_surf(4)
+
+    ! x_surf_s
+    uw_surf1_s => x_surf_s(1)
+    vw_surf1_s => x_surf_s(2)
+    tw_surf1_s => x_surf_s(3)
+    if (level >= 1) qw_surf1_s => x_surf_s(4)
 
     ! x1
     u1 => x1(:,1)
@@ -260,37 +285,68 @@ contains
 
     ! x2_misc
     b2  => x2_misc(:,1)
-    w3  => x2_misc(:,2)
-    tw2 => x2_misc(:,3)
-    bw2 => x2_misc(:,4)
-    t2w => x2_misc(:,5)
-    b2w => x2_misc(:,6)
+    bw  => x2_misc(:,2)
+    w3  => x2_misc(:,3)
+    tw2 => x2_misc(:,4)
+    bw2 => x2_misc(:,5)
+    t2w => x2_misc(:,6)
+    b2w => x2_misc(:,7)
     if (level >= 1) then
-       qw2 => x2_misc(:,7)
-       q2w => x2_misc(:,8)
+       qw2 => x2_misc(:,8)
+       q2w => x2_misc(:,9)
     end if
     if (level >= 2) then
-       thb => x2_misc(:,9)
-       lb  => x2_misc(:,10)
+       thb => x2_misc(:,10)
+       lb  => x2_misc(:,11)
     end if
 
     ! x2_misc_s
     b2_s  => x2_misc_s(:,1)
-    w3_s  => x2_misc_s(:,2)
-    tw2_s => x2_misc_s(:,3)
-    bw2_s => x2_misc_s(:,4)
-    t2w_s => x2_misc_s(:,5)
-    b2w_s => x2_misc_s(:,6)
+    bw_s  => x2_misc_s(:,2)
+    w3_s  => x2_misc_s(:,3)
+    tw2_s => x2_misc_s(:,4)
+    bw2_s => x2_misc_s(:,5)
+    t2w_s => x2_misc_s(:,6)
+    b2w_s => x2_misc_s(:,7)
     if (level >= 1) then
-       qw2_s => x2_misc_s(:,7)
-       q2w_s => x2_misc_s(:,8)
+       qw2_s => x2_misc_s(:,8)
+       q2w_s => x2_misc_s(:,9)
     end if
     if (level >= 1) then
-       thb_s => x2_misc_s(:,9)
-       lb_s  => x2_misc_s(:,10)
+       thb_s => x2_misc_s(:,10)
+       lb_s  => x2_misc_s(:,11)
     end if
     
   end subroutine init_stat_slab
+
+  !
+  ! sample_stat_surface
+  !
+  subroutine sample_stat_surface
+    use grid, only        : a_up, a_vp, a_wp, a_tp, a_rp, liquid, nzp, nyp, nxp, level, a_theta, vapor, &
+                            zm, a_pexnr, zt, a_ut, a_vt, a_wt, a_tt, a_rt, th00, dxi, dyi, &
+                            uw_sfc, vw_sfc, wt_sfc, wq_sfc
+    use modutil_mpi, only : par_sum
+    implicit none
+
+    real, allocatable, dimension(:), target :: x_surf_scratch
+    integer :: i, j
+
+    ! Sample first-order statistics
+    x_surf_s(:) = 0.
+    do j = 3,nyp-2
+    do i = 3,nxp-2
+       uw_surf1_s = uw_surf1_s + uw_sfc(i,j)
+       vw_surf1_s = vw_surf1_s + vw_sfc(i,j)
+       tw_surf1_s = tw_surf1_s + wt_sfc(i,j)
+       if (level >= 1) qw_surf1_s = qw_surf1_s + wq_sfc(i,j)
+    end do
+    end do
+    allocate(x_surf_scratch(nstats_x_surf))
+    call par_sum(x_surf_s, x_surf_scratch, nstats_x_surf)
+    x_surf_s(:) = x_surf_scratch(:)/real(n_s_global)
+
+  end subroutine sample_stat_surface
 
   !
   ! sample_stat_slab
@@ -466,9 +522,9 @@ contains
     do j = 3,nyp-2
     do i = 3,nxp-2
        do k = 2,nzp-1
-          ut_local(k) = ut_local(k) + (pp(k,i+1,j) - pp(k,i,j))*dxi
-          vt_local(k) = vt_local(k) + (pp(k,i,j+1) - pp(k,i,j))*dyi
-          wt_local(k) = wt_local(k) + (pp(k+1,i,j) - pp(k,i,j))/(zt(k+1) - zt(k))
+          ut_local(k) = ut_local(k) + th00*(pp(k,i+1,j) - pp(k,i,j))*dxi
+          vt_local(k) = vt_local(k) + th00*(pp(k,i,j+1) - pp(k,i,j))*dyi
+          wt_local(k) = wt_local(k) + th00*(pp(k+1,i,j) - pp(k,i,j))/(zt(k+1) - zt(k))
        end do
     end do
     end do
@@ -480,6 +536,8 @@ contains
     ut_s(:,itype) = ut_local(:)
     vt_s(:,itype) = vt_local(:)
     wt_s(:,itype) = wt_local(:)
+    tt_s(:,itype) = 0.
+    if (level >= 1) qt_s(:,itype) = 0.
 
     ! Sample second-order statistics
     if (itype == 1) x2t_s(:,:,:) = 0.
@@ -490,9 +548,9 @@ contains
           ip1 = i+1
           jp1 = j+1
 
-          Dp_u = (pp(k,ip1,j) - pp(k,i,j))*dxi
-          Dp_v = (pp(k,i,jp1) - pp(k,i,j))*dyi
-          Dp_w = (pp(k+1,i,j) - pp(k,i,j))/(zt(k+1) - zt(k))          
+          Dp_u = th00*(pp(k,ip1,j) - pp(k,i,j))*dxi
+          Dp_v = th00*(pp(k,i,jp1) - pp(k,i,j))*dyi
+          Dp_w = th00*(pp(k+1,i,j) - pp(k,i,j))/(zt(k+1) - zt(k))          
 
           u2t_s(k,itype) = u2t_s(k,itype) + 2.*(a_up(k,i,j) - u1_s(k))*(Dp_u - ut_s(k,itype))
           v2t_s(k,itype) = v2t_s(k,itype) + 2.*(a_vp(k,i,j) - v1_s(k))*(Dp_v - vt_s(k,itype))
@@ -559,6 +617,7 @@ contains
           kp1 = k+1
           
           b2_s(k)  = b2_s(k)  + (0.5*(a_scr1(k,i,j)+a_scr1(kp1,i,j))  - b1_s(k))**2.
+          bw_s(k)  = bw_s(k)  + (0.5*(a_scr1(k,i,j)+a_scr1(kp1,i,j))  - b1_s(k))*(a_wp(k,i,j) - w1_s(k))
           w3_s(k)  = w3_s(k)  + (a_wp(k,i,j) - w1_s(k))**3.
           tw2_s(k) = tw2_s(k) + (a_wp(k,i,j) - w1_s(k))**2.*(0.5*(a_tp(k,i,j)+a_tp(kp1,i,j)) - 0.5*(t1_s(k)+t1_s(kp1)))
           bw2_s(k) = bw2_s(k) + (a_wp(k,i,j) - w1_s(k))**2.*(0.5*(a_scr1(k,i,j)+a_scr1(kp1,i,j)) - b1_s(k))
@@ -601,28 +660,38 @@ contains
     f = real(n_s_local)/real(n_s_local + n_local)
 
     ! Update third-order statistics
-    w3(:)  = f*w3_s(:)  + (1. - f)*w3(:)
-    b2w(:) = f*b2w_s(:) + (1. - f)*b2w(:) 
-    t2w(:) = f*t2w_s(:) + (1. - f)*t2w(:) 
-    bw2(:) = f*bw2_s(:) + (1. - f)*bw2(:) 
-    tw2(:) = f*tw2_s(:) + (1. - f)*tw2(:) 
+    w3(:)  = f*w3_s(:)  + (1. - f)*w3(:)  
+    b2w(:) = f*b2w_s(:) + (1. - f)*b2w(:) + 2.*f*(1. - f)*(b1_s(:) - b1(:))*(bw_s(:) - bw(:))
+    t2w(2:nzp-1) = f*t2w_s(2:nzp-1) + (1. - f)*t2w(2:nzp-1) &
+         + 2.*f*(1. - f)*(0.5*(t1_s(2:nzp-1)+t1_s(3:nzp)) - 0.5*(t1(2:nzp-1)+t1(3:nzp)))*(tw_s(2:nzp-1) - tw(2:nzp-1))
+    bw2(:) = f*bw2_s(:) + (1. - f)*bw2(:) + f*(1. - f)*(b1_s(:) - b1(:))*(w2_s(:) - w2(:))                                           
+    tw2(2:nzp-1) = f*tw2_s(2:nzp-1) + (1. - f)*tw2(2:nzp-1) &
+         + f*(1. - f)*(0.5*(t1_s(2:nzp-1)+t1_s(3:nzp)) - 0.5*(t1(2:nzp-1)+t1(3:nzp)))*(w2_s(2:nzp-1) - w2(2:nzp-1))
     if (level >= 1) then
-       q2w(:) = f*q2w_s(:) + (1. - f)*q2w(:) 
-       qw2(:) = f*qw2_s(:) + (1. - f)*qw2(:) 
+       q2w(2:nzp-1) = f*q2w_s(2:nzp-1) + (1. - f)*q2w(2:nzp-1) &
+            + 2.*f*(1. - f)*(0.5*(q1_s(2:nzp-1)+q1_s(3:nzp)) - 0.5*(q1(2:nzp-1)+q1(3:nzp)))*(qw_s(2:nzp-1) - qw(2:nzp-1))
+       qw2(2:nzp-1) = f*qw2_s(2:nzp-1) + (1. - f)*qw2(2:nzp-1) &
+            + f*(1. - f)*(0.5*(q1_s(2:nzp-1)+q1_s(3:nzp)) - 0.5*(q1(2:nzp-1)+q1(3:nzp)))*(w2_s(2:nzp-1) - w2(2:nzp-1))
     end if
 
-    ! Update second-order statistics
+    ! Update second-order diagnostic variable statistics
+    b2(:)  = f*b2_s(:)  + (1. - f)*b2(:)  + f*(1. - f)*(b1_s(:) - b1(:))**2.
+    bw(:)  = f*bw_s(:)  + (1. - f)*bw(:)  + f*(1. - f)*(b1_s(:) - b1(:))*(w1_s(:) - w1(:))
+    thb(:) = f*thb_s(:) + (1. - f)*thb(:) + f*(1. - f)*(th1_s(:) - th1(:))*(b1_s(:) - b1(:))
+    lb(:)  = f*lb_s(:)  + (1. - f)*lb(:)  + f*(1. - f)*(l1_s(:) - l1(:))*(b1_s(:) - b1(:))
+
+    ! Update second-order prognostic variable statistics
     u2(:) = f*u2_s(:) + (1. - f)*u2(:) + f*(1. - f)*(u1_s(:) - u1(:))**2.
     v2(:) = f*v2_s(:) + (1. - f)*v2(:) + f*(1. - f)*(v1_s(:) - v1(:))**2.
     w2(:) = f*w2_s(:) + (1. - f)*w2(:) + f*(1. - f)*(w1_s(:) - w1(:))**2.
     t2(:) = f*t2_s(:) + (1. - f)*t2(:) + f*(1. - f)*(t1_s(:) - t1(:))**2.
-    uw(:) = f*uw_s(:) + (1. - f)*uw(:) + f*(1. - f)*(w1_s(:) - w1_s(:))*(u1_s(:) - u1(:))
-    vw(:) = f*vw_s(:) + (1. - f)*vw(:) + f*(1. - f)*(w1_s(:) - w1_s(:))*(v1_s(:) - v1(:))
-    tw(:) = f*tw_s(:) + (1. - f)*tw(:) + f*(1. - f)*(w1_s(:) - w1_s(:))*(t1_s(:) - t1(:))
+    uw(:) = f*uw_s(:) + (1. - f)*uw(:) + f*(1. - f)*(w1_s(:) - w1(:))*(u1_s(:) - u1(:))
+    vw(:) = f*vw_s(:) + (1. - f)*vw(:) + f*(1. - f)*(w1_s(:) - w1(:))*(v1_s(:) - v1(:))
+    tw(:) = f*tw_s(:) + (1. - f)*tw(:) + f*(1. - f)*(w1_s(:) - w1(:))*(t1_s(:) - t1(:))
     if (level >= 1) then
        q2(:) = f*q2_s(:) + (1. - f)*q2(:) + f*(1. - f)*(q1_s(:) - q1(:))**2.
-       qw(:) = f*qw_s(:) + (1. - f)*qw(:) + f*(1. - f)*(w1_s(:) - w1_s(:))*(q1_s(:) - q1(:))
-       tq(:) = f*tq_s(:) + (1. - f)*tq(:) + f*(1. - f)*(t1_s(:) - t1_s(:))*(q1_s(:) - q1(:))
+       qw(:) = f*qw_s(:) + (1. - f)*qw(:) + f*(1. - f)*(w1_s(:) - w1(:))*(q1_s(:) - q1(:))
+       tq(:) = f*tq_s(:) + (1. - f)*tq(:) + f*(1. - f)*(t1_s(:) - t1(:))*(q1_s(:) - q1(:))
     end if
 
     ! Update second-order tendency statistics
@@ -631,18 +700,18 @@ contains
        v2t(:,itype) = f*v2t_s(:,itype) + (1. - f)*v2t(:,itype) + 2.*f*(1. - f)*(v1_s(:) - v1(:))*(vt_s(:,itype) - vt(:,itype))
        w2t(:,itype) = f*w2t_s(:,itype) + (1. - f)*w2t(:,itype) + 2.*f*(1. - f)*(w1_s(:) - w1(:))*(wt_s(:,itype) - wt(:,itype))
        t2t(:,itype) = f*t2t_s(:,itype) + (1. - f)*t2t(:,itype) + 2.*f*(1. - f)*(t1_s(:) - t1(:))*(tt_s(:,itype) - tt(:,itype))
-       uwt(:,itype) = f*uwt_s(:,itype) + (1. - f)*uwt(:,itype) + f*(1. - f)*(w1_s(:) - w1_s(:))*(ut_s(:,itype) - ut(:,itype)) &
-                                                               + f*(1. - f)*(wt_s(:,itype) - wt_s(:,itype))*(u1_s(:) - u1(:))
-       vwt(:,itype) = f*vwt_s(:,itype) + (1. - f)*vwt(:,itype) + f*(1. - f)*(w1_s(:) - w1_s(:))*(vt_s(:,itype) - vt(:,itype)) &
-                                                               + f*(1. - f)*(wt_s(:,itype) - wt_s(:,itype))*(v1_s(:) - v1(:))
-       twt(:,itype) = f*twt_s(:,itype) + (1. - f)*twt(:,itype) + f*(1. - f)*(w1_s(:) - w1_s(:))*(tt_s(:,itype) - tt(:,itype)) &
-                                                               + f*(1. - f)*(wt_s(:,itype) - wt_s(:,itype))*(t1_s(:) - t1(:))
+       uwt(:,itype) = f*uwt_s(:,itype) + (1. - f)*uwt(:,itype) + f*(1. - f)*(w1_s(:) - w1(:))*(ut_s(:,itype) - ut(:,itype)) &
+                                                               + f*(1. - f)*(wt_s(:,itype) - wt(:,itype))*(u1_s(:) - u1(:))
+       vwt(:,itype) = f*vwt_s(:,itype) + (1. - f)*vwt(:,itype) + f*(1. - f)*(w1_s(:) - w1(:))*(vt_s(:,itype) - vt(:,itype)) &
+                                                               + f*(1. - f)*(wt_s(:,itype) - wt(:,itype))*(v1_s(:) - v1(:))
+       twt(:,itype) = f*twt_s(:,itype) + (1. - f)*twt(:,itype) + f*(1. - f)*(w1_s(:) - w1(:))*(tt_s(:,itype) - tt(:,itype)) &
+                                                               + f*(1. - f)*(wt_s(:,itype) - wt(:,itype))*(t1_s(:) - t1(:))
        if (level >= 1) then
           q2t(:,itype) = f*q2t_s(:,itype) + (1. - f)*q2t(:,itype) + 2.*f*(1. - f)*(q1_s(:) - q1(:))*(qt_s(:,itype) - qt(:,itype))
-          qwt(:,itype) = f*qwt_s(:,itype) + (1. - f)*qwt(:,itype) + f*(1. - f)*(w1_s(:) - w1_s(:))*(qt_s(:,itype) - qt(:,itype)) &
-                                                                  + f*(1. - f)*(wt_s(:,itype) - wt_s(:,itype))*(q1_s(:) - q1(:))
-          tqt(:,itype) = f*tqt_s(:,itype) + (1. - f)*tqt(:,itype) + f*(1. - f)*(t1_s(:) - t1_s(:))*(qt_s(:,itype) - qt(:,itype)) &
-                                                                  + f*(1. - f)*(tt_s(:,itype) - tt_s(:,itype))*(q1_s(:) - q1(:))
+          qwt(:,itype) = f*qwt_s(:,itype) + (1. - f)*qwt(:,itype) + f*(1. - f)*(w1_s(:) - w1(:))*(qt_s(:,itype) - qt(:,itype)) &
+                                                                  + f*(1. - f)*(wt_s(:,itype) - wt(:,itype))*(q1_s(:) - q1(:))
+          tqt(:,itype) = f*tqt_s(:,itype) + (1. - f)*tqt(:,itype) + f*(1. - f)*(t1_s(:) - t1(:))*(qt_s(:,itype) - qt(:,itype)) &
+                                                                  + f*(1. - f)*(tt_s(:,itype) - tt(:,itype))*(q1_s(:) - q1(:))
        end if
     end do
  
@@ -650,6 +719,7 @@ contains
     x1(:,:)      = f*x1_s(:,:)      + (1. - f)*x1(:,:)
     xt(:,:,:)    = f*xt_s(:,:,:)    + (1. - f)*xt(:,:,:)
     x1_misc(:,:) = f*x1_misc_s(:,:) + (1. - f)*x1_misc(:,:)
+    x_surf(:)    = f*x_surf_s(:)    + (1. - f)*x_surf(:)
 
     ! Update sample counts
     n_local  = n_local  + n_s_local
@@ -682,12 +752,12 @@ contains
 
     ! Separate tendencies
     do istat = 1,nstats_x1
-       do itype = ntypes,2,-1
+       do itype = ntypes-1,2,-1
           xt(:,itype,istat) = xt(:,itype,istat) - xt(:,itype-1,istat)
        end do
     end do
     do istat = 1,nstats_x2
-       do itype = ntypes,2,-1
+       do itype = ntypes-1,2,-1
           x2t(:,itype,istat) = x2t(:,itype,istat) - x2t(:,itype-1,istat)
        end do
     end do
@@ -709,6 +779,11 @@ contains
     call write_stat_var(ncid, 'wt', wt, irec)
     call write_stat_var(ncid, 'tt', tt, irec)
     if (level >= 1) call write_stat_var(ncid, 'qt', qt, irec)
+
+    call write_stat_var(ncid, 'uw_surf', uw_surf1, irec)
+    call write_stat_var(ncid, 'vw_surf', vw_surf1, irec)
+    call write_stat_var(ncid, 'tw_surf', tw_surf1, irec)
+    if (level >= 1) call write_stat_var(ncid, 'qw_surf', qw_surf1, irec)
 
     call write_stat_var(ncid, 'u2', u2, irec)
     call write_stat_var(ncid, 'v2', v2, irec)
@@ -743,6 +818,16 @@ contains
        call write_stat_var(ncid, 'l', l1, irec)
     end if
 
+    call write_stat_var(ncid, 'b2',  b2,  irec)
+    call write_stat_var(ncid, 'bw',  bw,  irec)
+    call write_stat_var(ncid, 'w3',  w3,  irec)
+    call write_stat_var(ncid, 't2w', t2w, irec)
+    if (level >= 1) call write_stat_var(ncid, 'q2w', q2w, irec)
+    call write_stat_var(ncid, 'b2w', b2w, irec)
+    call write_stat_var(ncid, 'tw2', tw2, irec)
+    if (level >= 1) call write_stat_var(ncid, 'qw2', qw2, irec)
+    call write_stat_var(ncid, 'bw2', bw2, irec)
+
     ! Reset statistics computation
     n_local  = 0.
     n_global = 0.
@@ -753,6 +838,7 @@ contains
     x2t(:,:,:)   = 0.
     x1_misc(:,:) = 0.
     x2_misc(:,:) = 0.
+    x_surf(:)    = 0.
 
   end subroutine write_stat_slab
 

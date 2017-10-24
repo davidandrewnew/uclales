@@ -330,10 +330,11 @@ contains
     use grid, only : level, dt, nstep, a_tt, a_up, a_vp, a_wp, dxi, dyi, dzi_t, &
          nxp, nyp, nzp, dn0,a_scr1, u0, v0, a_ut, a_vt, a_wt, zt, a_ricep, a_rct, a_rpt, &
          lwaterbudget, a_xt2
+    use grid, only : a_pexnr ! DAN
 ! Disable old statistic interace (DAN)
 !    use stat, only : sflg, statistics
     use modstat, only : sample_stat, update_stat ! DAN
-    use modstat_slab, only : stat_slab_tendency, stat_slab_misc ! DAN
+    use modstat_slab, only : stat_slab_tendency, stat_slab_misc, stat_slab_pressure ! DAN
     use sgsm, only : diffuse
     !use sgsm_dyn, only : calc_cs
     use srfc, only : surface
@@ -424,10 +425,14 @@ contains
        if (sflg) call stat_slab_tendency(6) ! DAN
        call decay
 
-       if (sflg) call update_stat ! DAN
+       if (sflg) then
+          call stat_slab_pressure(7, a_pexnr)
+          call update_stat ! DAN
+       end if
 
        call update (nstep)
-       call poisson
+!       call poisson
+       call poisson(sflg)
        call velset(nzp,nxp,nyp,a_up,a_vp,a_wp)
 
     end do

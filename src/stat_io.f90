@@ -49,7 +49,8 @@ contains
     use netcdf_interface, only : create_file, create_dim, create_unlimited_dim, create_var, &
                                  my_nf90_real, my_nf90_int, write_var
     use mpi_interface, only    : pecount 
-    use grid, only             : zt, zm, dn0, dthldtls, dqtdtls, level, wfls, pi0, u0, v0
+    use grid, only             : zt, zm, dn0, dthldtls, dqtdtls, level, wfls, pi0, u0, v0, nzp
+    use defs, only             : cp, R, alvl
     implicit none
 
     character(*), intent(in) :: name
@@ -57,6 +58,7 @@ contains
 
     integer              :: i
     integer, allocatable :: rank_values(:), type_values(:)
+    real, allocatable    :: pi0_by_cp(:)
 
     ! Create file
     call create_file(name, ncid)
@@ -85,13 +87,12 @@ contains
     call create_dim(ncid, type_name, type_values)
 
     ! Create non-time-dependant parameters for simulation parameters
-    call create_var(ncid, 'dn0',   (/zt_name/), my_nf90_real)
-    call create_var(ncid, 'pi0',   (/zt_name/), my_nf90_real)
-    call create_var(ncid, 'wfls',  (/zt_name/), my_nf90_real)
-    call create_var(ncid, 'ug',    (/zt_name/), my_nf90_real)
-    call create_var(ncid, 'vg',    (/zt_name/), my_nf90_real)
-    call create_var(ncid, 'tt_ls', (/zt_name/), my_nf90_real)
-    if (level >= 1) call create_var(ncid, 'qt_ls', (/zt_name/), my_nf90_real)
+!    call create_var(ncid, 'cp',   my_nf90_real)
+!    call create_var(ncid, 'alvl', my_nf90_real)
+!    call create_var(ncid, 'R',    my_nf90_real)
+
+    call create_var(ncid, 'dn0', (/zt_name/), my_nf90_real)
+    call create_var(ncid, 'pi0', (/zt_name/), my_nf90_real)
 
     ! Create variable for first and last sample times
     call create_var(ncid, 'nsmp',  (/time_name/), my_nf90_int)
@@ -99,13 +100,15 @@ contains
     call create_var(ncid, 'lsttm', (/time_name/), my_nf90_real)
 
     ! Write parameters
-    call write_var(ncid, 'dn0',   dn0)
-    call write_var(ncid, 'pi0',   pi0)
-    call write_var(ncid, 'wfls',  wfls)
-    call write_var(ncid, 'ug',    u0)
-    call write_var(ncid, 'vg',    v0)
-    call write_var(ncid, 'tt_ls', dthldtls)
-    if (level >= 1) call write_var(ncid, 'qt_ls', dqtdtls)
+!    call write_var(ncid, 'cp',   cp)
+!    call write_var(ncid, 'alvl', alvl)
+!    call write_var(ncid, 'R',    R)
+
+    allocate(pi0_by_cp(nzp))
+    pi0_by_cp(:) = pi0(:)/cp
+
+    call write_var(ncid, 'dn0', dn0)
+    call write_var(ncid, 'pi0', pi0_by_cp)
 
     ! Initialize record index
     irec = 0

@@ -244,6 +244,7 @@ contains
 
     use mpi_interface, only : pecount, double_scalar_par_sum,myid, appl_abort
     use stat, only : get_zi
+    use grid, only : th0 ! DAN
 
     integer, intent (in):: n1,n2, n3
     real, dimension (n1), intent (in)          :: zt, dzi_t, dzi_m
@@ -306,7 +307,7 @@ contains
           if (zt(k) < 1500.) then
              sf(k) =  -0.0065*zt(k)/1500.
           else
-             sf(k) =  min(0.,-0.0065  + 0.0065*(zt(k)-1500.)/600.)
+             sf(k) =  min(0.,-0.0065  + 0.0065*(zt(k) - 1500.)/600.) 
           end if
           sf(k) = sf(k)*dzi_t(k)
        end do
@@ -318,21 +319,20 @@ contains
                 ! temperature advection and radiative cooling
                 !
                 kp1 = k+1
+                tt(k,i,j) = tt(k,i,j) - (tl(kp1,i,j) - tl(k,i,j))*sf(k)
                 if (zt(k) < 1500.) then
-                   tt(k,i,j) = tt(k,i,j) - ( tl(kp1,i,j)-tl(k,i,j) )*sf(k) &
-                        - 2.315e-5
-                else if (zt(k) < 2000.) then
-                   tt(k,i,j) = tt(k,i,j) - ( tl(kp1,i,j)-tl(k,i,j) )*sf(k) &
-                        - 2.315e-5*(1.- (zt(k)-1500.)*1.e-3)
+                   tt(k,i,j) = tt(k,i,j) - 2.315e-5
+                else 
+                   tt(k,i,j) = tt(k,i,j) + min(0., -2.315e-5*(1.- (zt(k) - 1500.)/1000.))
                 end if
                 !
                 ! moisture advection
                 !
-                rtt(k,i,j) = rtt(k,i,j) - ( rt(kp1,i,j) - rt(k,i,j) )*sf(k)
+                rtt(k,i,j) = rtt(k,i,j) - (rt(kp1,i,j) - rt(k,i,j))*sf(k)
                 if (zt(k) < 300.) then
-                   rtt(k,i,j) = rtt(k,i,j)  - 1.2e-8
-                elseif (zt(k) < 500.) then
-                   rtt(k,i,j) = rtt(k,i,j)  - 1.2e-8*(1.- (zt(k)-300.)/200.)
+                   rtt(k,i,j) = rtt(k,i,j) - 1.2e-8
+                else
+                   rtt(k,i,j) = rtt(k,i,j) + min(0., -1.2e-8*(1. - (zt(k) - 300.)/200.))
                 end if
              enddo
           enddo
