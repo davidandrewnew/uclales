@@ -87,17 +87,17 @@ contains
     call create_dim(ncid, type_name, type_values)
 
     ! Create non-time-dependant parameters for simulation parameters
-!    call create_var(ncid, 'cp',   my_nf90_real)
-!    call create_var(ncid, 'alvl', my_nf90_real)
-!    call create_var(ncid, 'R',    my_nf90_real)
+    call create_var(ncid=ncid, var_name='cp',   type=my_nf90_real)
+    call create_var(ncid=ncid, var_name='alvl', type=my_nf90_real)
+    call create_var(ncid=ncid, var_name='R',    type=my_nf90_real)
 
-    call create_var(ncid, 'dn0', (/zt_name/), my_nf90_real)
-    call create_var(ncid, 'pi0', (/zt_name/), my_nf90_real)
+    call create_var(ncid, 'dn0', my_nf90_real, (/zt_name/))
+    call create_var(ncid, 'pi0', my_nf90_real, (/zt_name/))
 
     ! Create variable for first and last sample times
-    call create_var(ncid, 'nsmp',  (/time_name/), my_nf90_int)
-    call create_var(ncid, 'fsttm', (/time_name/), my_nf90_real)
-    call create_var(ncid, 'lsttm', (/time_name/), my_nf90_real)
+    call create_var(ncid, 'nsmp',  my_nf90_int, (/time_name/))
+    call create_var(ncid, 'fsttm', my_nf90_real, (/time_name/))
+    call create_var(ncid, 'lsttm', my_nf90_real, (/time_name/))
 
     ! Write parameters
 !    call write_var(ncid, 'cp',   cp)
@@ -127,9 +127,9 @@ contains
     character(*), intent(in) :: var_name
 
     if (pecount == 1) then
-       call create_var(ncid, var_name, (/time_name/), data_type)
+       call create_var(ncid, var_name, data_type, (/time_name/))
     else
-       call create_var(ncid, var_name, (/rank_name, time_name/), data_type)
+       call create_var(ncid, var_name, data_type, (/rank_name, time_name/))
     end if
 
   end subroutine create_stat_var_0d
@@ -146,9 +146,9 @@ contains
     character(*), intent(in) :: var_name, z_dim_name
 
     if (pecount == 1) then
-       call create_var(ncid, var_name, (/z_dim_name, time_name/), data_type)
+       call create_var(ncid, var_name, data_type, (/z_dim_name, time_name/))
     else
-       call create_var(ncid, var_name, (/z_dim_name, rank_name, time_name/), data_type)
+       call create_var(ncid, var_name, data_type, (/z_dim_name, rank_name, time_name/))
     end if
 
   end subroutine create_stat_var_1d
@@ -165,9 +165,9 @@ contains
     character(*), intent(in) :: var_name, z_dim_name
 
     if (pecount == 1) then
-       call create_var(ncid, var_name, (/z_dim_name, type_name, time_name/), data_type)
+       call create_var(ncid, var_name, data_type, (/z_dim_name, type_name, time_name/))
     else
-       call create_var(ncid, var_name, (/z_dim_name, type_name, rank_name, time_name/), data_type)
+       call create_var(ncid, var_name, data_type, (/z_dim_name, type_name, rank_name, time_name/))
     end if
 
   end subroutine create_stat_var_2d

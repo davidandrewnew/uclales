@@ -30,6 +30,8 @@ use lsmdata
   real    :: rh_srf = 1.
   real    :: drag   = -1.
 
+  integer :: sflux_type = 0 ! Surface flux type (0->energetic, 1->kinematic)
+
 contains
   !
   ! --------------------------------------------------------------------------

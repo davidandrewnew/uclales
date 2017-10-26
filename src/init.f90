@@ -62,8 +62,10 @@ contains
     use modcross, only : initcross, triggercross
     use grid, only : nzp, dn0, u0, v0, zm, zt, isfctyp
     use modparticles, only: init_particles, lpartic, lpartdump, lpartstat, initparticledump, initparticlestat, write_particle_hist, particlestat
-    use netcdf_interface, only : init_netcdf_interface ! DAN
-    use modstat, only          : init_stat ! DAN
+    use netcdf_interface, only : init_netcdf_interface      ! DAN
+    use modstat, only          : init_stat                  ! DAN
+    use srfc, only             : dthcon, drtcon, sflux_type ! DAN
+    use defs, only             : cp, alvl                   ! DAN
 
     implicit none
 
@@ -98,6 +100,12 @@ contains
           end do
        end if
        dt  = dtlong
+
+       ! Allow kinematic surface fluxes (DAN)
+       if (sflux_type == 1) then
+          dthcon = dthcon*0.5*(dn0(1)+dn0(2))*cp
+          drtcon = drtcon*0.5*(dn0(1)+dn0(2))*alvl
+       end if
     else if (runtype == 'HISTORY') then
        call hstart
        if (lhomrestart) then

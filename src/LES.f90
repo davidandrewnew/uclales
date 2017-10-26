@@ -103,6 +103,7 @@ contains
     use mcrp, only : microseq,lrandommicro,timenuc,nin_set,cloud_type, lpartdrop
     use modparticles, only : lpartic, lpartsgs, lrandsurf, lpartstat, lpartdump, &
          lpartdumpui, lpartdumpth, lpartdumpmr, frqpartdump, ldropstart
+    use srfc, only : sflux_type ! DAN
 
     implicit none
 
@@ -128,6 +129,7 @@ contains
                   iradtyp, radfrq , strtim , sfc_albedo, & ! radiation type flag
          isfctyp, ubmin  , zrough ,          & ! surface parameterization type
          sst    , dthcon , drtcon ,          & ! SSTs, surface flx parameters
+         sflux_type,                         & ! Surface flux type (0->energetic, 1->kinematic)
          csx    , prndtl ,                   & ! SGS model type, parameters
          ipsflg , itsflg , irsflg,           & ! sounding flags
          hs     , ps     , ts    ,           & ! sounding heights, pressure, temperature

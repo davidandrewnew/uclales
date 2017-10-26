@@ -211,7 +211,7 @@ module netcdf_interface
          call handle_error(iret, 'In nf90mpi_def_dim: ' // trim(name))
 
          ! Create corresponding variable
-         call create_var(ncid, trim(name), (/trim(name)/), type)
+         call create_var(ncid, trim(name), type, (/trim(name)/))
       end if
 
     end subroutine create_unlimited_dim
@@ -239,7 +239,7 @@ module netcdf_interface
          call handle_error(iret, 'In nf90mpi_def_dim: ' // trim(name))
 
          ! Create corresponding variable
-         call create_var(ncid, trim(name), (/trim(name)/), my_nf90_real)
+         call create_var(ncid, trim(name), my_nf90_real, (/trim(name)/))
          call write_var(ncid, trim(name), values)
       end if
 
@@ -268,7 +268,7 @@ module netcdf_interface
          call handle_error(iret, 'In nf90mpi_def_dim: ' // trim(name))
 
          ! Create corresponding variable
-         call create_var(ncid, trim(name), (/trim(name)/), my_nf90_int)
+         call create_var(ncid, trim(name), my_nf90_int, (/trim(name)/))
          call write_var(ncid, trim(name), values)
       end if
 
@@ -277,14 +277,14 @@ module netcdf_interface
     !
     ! create_var
     !
-    subroutine create_var(ncid, var_name, dim_names, type, varid)
+    subroutine create_var(ncid, var_name, type, dim_names, varid)
       use pnetcdf, only : nf90mpi_def_var, nf90mpi_inq_dimid
       implicit none
 
-      integer, intent(in)            :: ncid, type
-      character(*), intent(in)       :: var_name
-      character(*), dimension(:)     :: dim_names
-      integer, intent(out), optional :: varid
+      integer, intent(in)                :: ncid, type
+      character(*), intent(in)           :: var_name
+      character(*), intent(in), optional :: dim_names(:)
+      integer, intent(out), optional     :: varid
 
       integer              :: iret, ndims, idim, varid_temp
       integer, allocatable :: dimids(:)
@@ -293,17 +293,21 @@ module netcdf_interface
       call define_mode(ncid)
 
       ! Get number of dimensions
-      ndims = size(dim_names)
-      allocate(dimids(ndims))
+      if (present(dim_names)) then
+         ndims = size(dim_names)
+         allocate(dimids(ndims))
       
-      ! Get dimension IDs
-      do idim = 1,ndims
-         iret = nf90mpi_inq_dimid(ncid, trim(dim_names(idim)), dimids(idim))
-         call handle_error(iret, 'In nf90mpi_inq_dimid: ' // trim(dim_names(idim)))
-      end do
+         ! Get dimension IDs
+         do idim = 1,ndims
+            iret = nf90mpi_inq_dimid(ncid, trim(dim_names(idim)), dimids(idim))
+            call handle_error(iret, 'In nf90mpi_inq_dimid: ' // trim(dim_names(idim)))
+         end do
 
-      ! Define variable
-      iret = nf90mpi_def_var(ncid, trim(var_name), type, dimids, varid_temp)
+         ! Define variable
+         iret = nf90mpi_def_var(ncid, trim(var_name), type, dimids, varid_temp)
+      else
+         iret = nf90mpi_def_var(ncid=ncid, name=trim(var_name), xtype=type, varid=varid_temp)
+      end if
       call handle_error(iret, 'In nf90mpi_def_var: ' // trim(var_name))
 
       ! Output varid
@@ -327,13 +331,6 @@ module netcdf_interface
       integer                       :: iret, varid
       integer(kind=MPI_OFFSET_KIND) :: start(1)
 
-      ! Set start
-      if (present(irec)) then
-         start(1) = irec
-      else
-         start(1) = 1
-      end if
-
       ! Get variable ID
       iret = nf90mpi_inq_varid(ncid, trim(name), varid)
       call handle_error(iret, 'In nf90mpi_inq_varid: ' // trim(name))
@@ -342,7 +339,14 @@ module netcdf_interface
       call collective_data_mode(ncid)
 
       ! Write data
-      iret = nf90mpi_put_var_all(ncid, varid, value, start)
+      if (present(irec)) then
+         ! Set start
+         start(1) = irec
+
+         iret = nf90mpi_put_var_all(ncid, varid, value, start)
+      else
+         iret = nf90mpi_put_var_all(ncid, varid, value)
+      end if
       call handle_error(iret, 'In nf90mpi_put_var: ' // trim(name))
 
     end subroutine write_real_0d
@@ -363,13 +367,6 @@ module netcdf_interface
       integer                       :: iret, varid
       integer(kind=MPI_OFFSET_KIND) :: start(1)
 
-      ! Set start
-      if (present(irec)) then
-         start(1) = irec
-      else
-         start(1) = 1
-      end if
-
       ! Get variable ID
       iret = nf90mpi_inq_varid(ncid, trim(name), varid)
       call handle_error(iret, 'In nf90mpi_inq_varid: ' // trim(name))
@@ -378,7 +375,14 @@ module netcdf_interface
       call collective_data_mode(ncid)
 
       ! Write data
-      iret = nf90mpi_put_var_all(ncid, varid, value, start)
+      if (present(irec)) then
+         ! Get start value
+         start(1) = irec
+
+         iret = nf90mpi_put_var_all(ncid, varid, value, start)
+      else
+         iret = nf90mpi_put_var_all(ncid, varid, value)
+      end if
       call handle_error(iret, 'In nf90mpi_put_var: ' // trim(name))
 
     end subroutine write_int_0d

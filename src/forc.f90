@@ -303,18 +303,19 @@ contains
        !
        ! calculate subsidence factor (wsub / dz)
        !
-       do k=2,n1-2
+       do k = 2,n1-2
           if (zt(k) < 1500.) then
              sf(k) =  -0.0065*zt(k)/1500.
           else
-             sf(k) =  min(0.,-0.0065  + 0.0065*(zt(k) - 1500.)/600.) 
+!             sf(k) = min(0.,-0.0065  + 0.0065*(zt(k) - 1500.)/600.) 
+             sf(k) = min(0.,-0.0065  + 0.0065*(zt(k) - 1500.)/1000.) 
           end if
           sf(k) = sf(k)*dzi_t(k)
        end do
 
-       do j=3,n3-2
-          do i=3,n2-2
-             do k=2,n1-2
+       do j = 3,n3-2
+          do i = 3,n2-2
+             do k = 2,n1-2
                 !
                 ! temperature advection and radiative cooling
                 !
