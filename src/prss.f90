@@ -32,16 +32,19 @@ contains
 ! subroutine poisson: called by timesteping driver to invert the 
 ! poisson equation for pressure and apply the velocity tendencies.
 !
-! DAN
 !  subroutine poisson
-  subroutine poisson(sflg)
-    use grid, only : nxp, nyp, nzp, dxi, dyi, dzi_m, dzi_t, dt, a_up, a_ut,      &
-         a_vp, a_vt, a_wp, a_wt, press, a_pexnr, th00, dn0, wsavex, wsavey
+  subroutine poisson(u, v, w, pp, pc)
+! DAN
+!    use grid, only : nxp, nyp, nzp, dxi, dyi, dzi_m, dzi_t, dt, a_up, a_ut,      &
+!         a_vp, a_vt, a_wp, a_wt, press, a_pexnr, th00, dn0, wsavex, wsavey
+     use grid, only : nxp, nyp, nzp, dxi, dyi, dzi_m, dzi_t, dt, th00, dn0, wsavex, wsavey
+         
 ! Disabling old statisitcs interface (DAN)
 !    use stat, only : fill_scalar, sflg
     use util, only : ae1mm
 
-    logical, intent(in) :: sflg
+    real, intent(out), dimension(:,:,:)           :: u, v, w, pp
+    real, intent(out), optional, dimension(:,:,:) :: pc
 
     complex, allocatable     :: s1(:,:,:)
     real    :: mxdiv, awpbar(nzp)
@@ -57,11 +60,19 @@ contains
     ! Pressure Solve
     !
 
+! DAN
 !    call poiss(nzp,nxp,nyp,ix,iy,a_ut,a_vt,a_wt,a_up,a_vp,a_wp,a_pexnr,     &
 !         press,dn0,th00,dzi_t,dzi_m,dxi,dyi,dt,s1,wsavex,wsavey)
-    call poiss(nzp,nxp,nyp,ix,iy,a_ut,a_vt,a_wt,a_up,a_vp,a_wp,a_pexnr,     &
-         press,dn0,th00,dzi_t,dzi_m,dxi,dyi,dt,s1,wsavex,wsavey,sflg)
-    call ae1mm(nzp,nxp,nyp,a_wp,awpbar)
+    if (present(pc)) then
+       call poiss(nzp, nxp, nyp, ix, iy, u, v, w, pp,     & 
+                  dn0, th00, dzi_t, dzi_m, dxi, dyi, dt, s1, wsavex, wsavey, pc)
+    else
+       call poiss(nzp, nxp, nyp, ix, iy, u, v, w, pp,     & 
+                  dn0, th00, dzi_t, dzi_m, dxi, dyi, dt, s1, wsavex, wsavey)
+    end if
+! DAN
+!    call ae1mm(nzp,nxp,nyp,a_wp,awpbar)
+    call ae1mm(nzp, nxp, nyp, w, awpbar) ! DAN
 
     !
     ! -------
@@ -86,21 +97,31 @@ contains
   ! cyclic in x and y.  pp and pc are used as scratch arrays in the
   ! call to trdprs.  pp is filled with its diagnostic value in fll_prs
   !
+! DAN
 !  subroutine poiss(n1,n2,n3,ix,iy,ut,vt,wt,u,v,w,pp,pc,dn0,th00,dzi_t,dzi_m, &
 !       dx,dy,dt,s1,wsvx,wsvy)
-  subroutine poiss(n1,n2,n3,ix,iy,ut,vt,wt,u,v,w,pp,pc,dn0,th00,dzi_t,dzi_m, &
-       dx,dy,dt,s1,wsvx,wsvy,sflg)
+  subroutine poiss(n1, n2, n3, ix, iy, u, v, w, pp, dn0, th00, dzi_t, dzi_m, & ! DAN
+                   dx, dy, dt, s1, wsvx, wsvy, pc)                             ! DAN
 
     use util, only  : get_fft_twodim, velset
     use grid, only  : rkalpha, rkbeta, nstep
 
-    integer :: n1,n2,n3,ix,iy
-    real    :: pp(n1,n2,n3),pc(n1,n2,n3),dmy
-    real, dimension(n1,n2,n3)  :: ut, vt, wt, u, v, w
-    real    :: wsvx(1:),wsvy(1:),dn0(n1),dzi_t(n1),dzi_m(n1),dx,dy,dt,th00
-    complex :: s1(ix,iy,n1)
+    integer, intent(in)                           :: n1, n2, n3, ix, iy
+    real, dimension(:,:,:), intent(out)           :: u, v, w, pp
+    real, intent(in)                              :: th00, dx, dy, dt
+    real, dimension(:), intent(in)                :: dn0, dzi_t, dzi_m
+    complex, dimension(:,:,:), intent(out)        :: s1
+    real, dimension(:,:,:), optional, intent(out) :: pc
 
-    logical, intent(in) :: sflg ! (DAN)
+!    integer :: n1,n2,n3,ix,iy
+!    real    :: pp(n1,n2,n3),pc(n1,n2,n3),dmy
+    real    :: dmy ! DAN
+! DAN
+!    real, dimension(n1,n2,n3)  :: ut, vt, wt, u, v, w
+!    real    :: wsvx(1:),wsvy(1:),dn0(n1),dzi_t(n1),dzi_m(n1),dx,dy,dt,th00
+    real    :: wsvx(1:), wsvy(1:) ! DAN
+! DAN
+!    complex :: s1(ix,iy,n1)
 
     call get_diverg(n1,n2,n3,ix,iy,s1,u,v,w,dn0,dzi_t,dx,dy,dt,dmy)
     call get_fft_twodim(ix,iy,n1,s1,wsvx,wsvy,-1)
@@ -113,12 +134,13 @@ contains
     ! poisson solver within the main stepper in step.f90, in fact, they are put to zero at 
     ! the start of the new RK timestep in the call to 'tendencies'
 
-!    call prs_grad(n1,n2,n3,ix,iy,s1,pp,u,v,w,dzi_m,dx,dy,dt)   
-    call prs_grad(n1,n2,n3,ix,iy,s1,pp,u,v,w,dzi_m,dx,dy,dt,sflg)   
+    call prs_grad(n1,n2,n3,ix,iy,s1,pp,u,v,w,dzi_m,dx,dy,dt)   
     call get_diverg(n1,n2,n3,ix,iy,s1,u,v,w,dn0,dzi_t,dx,dy,dt,dmy)
 
     pp(:,:,:) = pp(:,:,:)/th00/(rkalpha(nstep)+rkbeta(nstep))
-    pc(:,:,:) = pp(:,:,:)
+! DAN
+!    pc(:,:,:) = pp(:,:,:)
+    if (present(pc)) pc(:,:,:) = pp(:,:,:) ! DAN
     
   end subroutine poiss
   !
@@ -177,10 +199,7 @@ contains
   ! Note that not the tendencies, but the actual velocities are updated and output
   ! within this routine
   !
-! DAN
-!  subroutine prs_grad(n1,n2,n3,ix,iy,s1,p,u,v,w,dz,dx,dy,dt)
-  subroutine prs_grad(n1,n2,n3,ix,iy,s1,p,u,v,w,dz,dx,dy,dt,sflg)
-    use modstat_slab, only : stat_slab_pressure ! DAN
+  subroutine prs_grad(n1,n2,n3,ix,iy,s1,p,u,v,w,dz,dx,dy,dt)
     use mpi_interface, only : cyclics,cyclicc
 
     integer, intent (in) :: n1,n2,n3,ix,iy
@@ -188,8 +207,6 @@ contains
     real, intent (inout) :: u(n1,n2,n3),v(n1,n2,n3),w(n1,n2,n3)
     real, intent (out)   :: p(n1,n2,n3)
     complex, intent (in) :: s1(ix,iy,n1)
-
-    logical, intent(in) :: sflg ! DAN
 
     integer :: i,j,k,l,m,req(16)
 
@@ -207,9 +224,6 @@ contains
     enddo
     call cyclics(n1,n2,n3,p,req)
     call cyclicc(n1,n2,n3,p,req)
-
-    ! DAN
-!    if (sflg) call stat_slab_pressure(7, p/dt)
 
 ! Pressure in following calculation contains a timestep term
 

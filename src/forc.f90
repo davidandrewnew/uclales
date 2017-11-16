@@ -244,7 +244,7 @@ contains
 
     use mpi_interface, only : pecount, double_scalar_par_sum,myid, appl_abort
     use stat, only : get_zi
-    use grid, only : th0 ! DAN
+    use grid, only : th0, rt0, th00, wfls, dthldtls, dqtdtls, dn0
 
     integer, intent (in):: n1,n2, n3
     real, dimension (n1), intent (in)          :: zt, dzi_t, dzi_m
@@ -258,6 +258,8 @@ contains
 
     real (kind=8) :: zig, zil
     real          :: zibar
+
+    real :: gamma_t_fa, gamma_q_fa, w0, q0, m0, m0_fa
 
     select case (trim(case_name))
     case('rico')
@@ -295,7 +297,7 @@ contains
                 else
                    rtt(k,i,j) = rtt(k,i,j)  + .3456/8.64e7
                 end if
-1             enddo
+             enddo
           enddo
        enddo
 
@@ -303,41 +305,81 @@ contains
        !
        ! calculate subsidence factor (wsub / dz)
        !
+       gamma_t_fa = (311.85 - 308.2)/(3000. - 2000.)
+       gamma_q_fa = (3.E-3 - 4.2E-3)/(3000. - 2000.)
+
+       q0    = -2./(60.*60.*24.)
+       m0    = -1.2E-8
+!       w0 = -6.5E-3
+       w0    = q0/gamma_t_fa
+       m0_fa = 0.5*w0*gamma_q_fa
+
+       !
+       wfls(1)           = 0.
+       wfls(n1-1:n1)     = 0.
+       dthldtls(1)       = 0.
+       dthldtls(n1-1:n1) = 0.
+       dqtdtls(1)        = 0.
+       dqtdtls(n1-1:n1)  = 0.
        do k = 2,n1-2
+          ! Subsidence
           if (zt(k) < 1500.) then
-             sf(k) =  -0.0065*zt(k)/1500.
+             wfls(k) = w0*zt(k)/1500.
           else
-!             sf(k) = min(0.,-0.0065  + 0.0065*(zt(k) - 1500.)/600.) 
-             sf(k) = min(0.,-0.0065  + 0.0065*(zt(k) - 1500.)/1000.) 
+             if (zt(k) < 2500.) then
+                wfls(k) = min(0.,w0 - w0*(zt(k) - 1500.)/1000.) 
+             else
+                wfls(k) = 0.
+             end if
           end if
-          sf(k) = sf(k)*dzi_t(k)
+          sf(k) = wfls(k)*dzi_t(k)
+
+          ! Cooling
+          if (zt(k) < 1500.) then
+             dthldtls(k) = q0
+          else
+             if (zt(k) < 2500.) then
+                dthldtls(k) = min(0., q0*(1.- (zt(k) - 1500.)/1000.))
+             else
+                dthldtls(k) = 0.
+             end if
+          end if
+
+          ! Drying
+          if (zt(k) < 300.) then
+             dqtdtls(k) = m0
+          else
+             if (zt(k) < 500.) then
+                dqtdtls(k) = min(0., m0*(1. - (zt(k) - 300.)/200.))
+             else
+                if (zt(k) < 2000.) then
+                   dqtdtls(k) = 0.
+                else
+                   if (zt(k) < 2500.) then
+                      dqtdtls(k) = max(0., m0_fa*(1. - (zt(k) - 2000.)/500.))
+                   else
+                      dqtdtls(k) = 0.
+                   end if
+                end if
+             end if
+          end if
        end do
 
+       ! Apply forcings
        do j = 3,n3-2
           do i = 3,n2-2
              do k = 2,n1-2
-                !
-                ! temperature advection and radiative cooling
-                !
                 kp1 = k+1
-                tt(k,i,j) = tt(k,i,j) - (tl(kp1,i,j) - tl(k,i,j))*sf(k)
-                if (zt(k) < 1500.) then
-                   tt(k,i,j) = tt(k,i,j) - 2.315e-5
-                else 
-                   tt(k,i,j) = tt(k,i,j) + min(0., -2.315e-5*(1.- (zt(k) - 1500.)/1000.))
-                end if
-                !
-                ! moisture advection
-                !
-                rtt(k,i,j) = rtt(k,i,j) - (rt(kp1,i,j) - rt(k,i,j))*sf(k)
-                if (zt(k) < 300.) then
-                   rtt(k,i,j) = rtt(k,i,j) - 1.2e-8
-                else
-                   rtt(k,i,j) = rtt(k,i,j) + min(0., -1.2e-8*(1. - (zt(k) - 300.)/200.))
-                end if
+                tt(k,i,j)  = tt(k,i,j)  - (tl(kp1,i,j) - tl(k,i,j))*sf(k) + dthldtls(k)
+                rtt(k,i,j) = rtt(k,i,j) - (rt(kp1,i,j) - rt(k,i,j))*sf(k) + dqtdtls(k)
+!                if (zt(k) > 2000.) then
+!                   tt(k,i,j)  = tt(k,i,j)  - (tl(k,i,j) - (th0(k) - th00))/(60.*60.)                                                    
+!                   rtt(k,i,j) = rtt(k,i,j) - (rt(k,i,j) - rt0(k))/(60.*60.)
+!                end if
              enddo
           enddo
        enddo
+
     case ('atex')
        !
        ! calculate subsidence factor (wsub / dz)

@@ -28,16 +28,20 @@ real, dimension(:), pointer :: u1, v1, w1, t1, q1, u1_s, v1_s, w1_s, t1_s, q1_s,
                                u2, v2, w2, t2, q2, uw, vw, tw, qw, tq, &
                                u2_s, v2_s, w2_s, t2_s, q2_s, uw_s, vw_s, tw_s, qw_s, tq_s
 real, dimension(:,:), pointer :: ut, vt, wt, tt, qt, ut_s, vt_s, wt_s, tt_s, qt_s, &
+                                 ut_press, vt_press, wt_press, tt_press, qt_press, ut_press_s, vt_press_s, wt_press_s, tt_press_s, qt_press_s, &
                                  u2t, v2t, w2t, t2t, q2t, uwt, vwt, twt, qwt, tqt, &
-                                 u2t_s, v2t_s, w2t_s, t2t_s, q2t_s, uwt_s, vwt_s, twt_s, qwt_s, tqt_s
-real, dimension(:), pointer :: b1, N2, th1, l1, b1_s, N2_s, th1_s, l1_s, &
+                                 u2t_press, v2t_press, w2t_press, t2t_press, q2t_press, uwt_press, vwt_press, twt_press, qwt_press, tqt_press, &
+                                 u2t_s, v2t_s, w2t_s, t2t_s, q2t_s, uwt_s, vwt_s, twt_s, qwt_s, tqt_s, &
+                                 u2t_press_s, v2t_press_s, w2t_press_s, t2t_press_s, q2t_press_s, uwt_press_s, vwt_press_s, twt_press_s, qwt_press_s, tqt_press_s
+real, dimension(:), pointer :: b1, N2, pi11, wfls1, dthldtls1, dqtdtls1, th1, l1, &
+                               b1_s, N2_s, pi11_s, wfls1_s, dthldtls1_s, dqtdtls1_s, th1_s, l1_s, &
                                b2, bw, thb, lb, w3, tw2, qw2, bw2, t2w, q2w, b2w, &
                                b2_s, bw_s, thb_s, lb_s, w3_s, tw2_s, qw2_s, bw2_s, t2w_s, q2w_s, b2w_s
 real, pointer :: uw_surf1, vw_surf1, tw_surf1, qw_surf1, uw_surf1_s, vw_surf1_s, tw_surf1_s, qw_surf1_s
 
 real, dimension(:), allocatable, target     :: x_surf, x_surf_s
 real, dimension(:,:), allocatable, target   :: x1, x2, x1_misc, x2_misc, x1_s, x2_s, x1_misc_s, x2_misc_s
-real, dimension(:,:,:), allocatable, target :: xt, x2t, xt_s, x2t_s
+real, dimension(:,:,:), allocatable, target :: xt, xt_press, x2t, x2t_press, xt_s, xt_press_s, x2t_s, x2t_press_s
 
 contains
 
@@ -64,8 +68,8 @@ contains
     call create_stat_var(ncid, 'n', zt_name, my_nf90_int)
 
     ! x_surf
-    nstats_x_surf = 2
-    if (level >= 1) nstats_x_surf = nstats_x_surf + 2
+    nstats_x_surf = 3
+    if (level >= 1) nstats_x_surf = nstats_x_surf + 1
     allocate(x_surf(nstats_x_surf), x_surf_s(nstats_x_surf))
     x_surf(:) = 0.
     call create_stat_var(ncid, 'uw_surf', my_nf90_real)
@@ -92,6 +96,13 @@ contains
     call create_stat_var_2d(ncid, 'wt', zm_name, my_nf90_real)
     call create_stat_var_2d(ncid, 'tt', zt_name, my_nf90_real)
     if (level >= 1) call create_stat_var_2d(ncid, 'qt', zt_name, my_nf90_real)
+
+    ! xt_press
+    allocate(xt_press(nzp,ntypes,nstats_x1),xt_press_s(nzp,ntypes,nstats_x1)) 
+    xt_press(:,:,:) = 0.
+    call create_stat_var_2d(ncid, 'ut_press', zt_name, my_nf90_real)
+    call create_stat_var_2d(ncid, 'vt_press', zt_name, my_nf90_real)
+    call create_stat_var_2d(ncid, 'wt_press', zm_name, my_nf90_real)
 
     ! x2
     nstats_x2 = 7
@@ -131,16 +142,34 @@ contains
        call create_stat_var_2d(ncid, 'tqt', zt_name, my_nf90_real)
     end if
 
+    ! x2t_press
+    allocate(x2t_press(nzp,ntypes,nstats_x2), x2t_press_s(nzp,ntypes,nstats_x2))
+    x2t_press(:,:,:) = 0.
+    call create_stat_var_2d(ncid, 'u2t_press', zt_name, my_nf90_real)
+    call create_stat_var_2d(ncid, 'v2t_press', zt_name, my_nf90_real)
+    call create_stat_var_2d(ncid, 'w2t_press', zm_name, my_nf90_real)
+    call create_stat_var_2d(ncid, 'uwt_press',  zm_name, my_nf90_real)
+    call create_stat_var_2d(ncid, 'vwt_press',  zm_name, my_nf90_real)
+    call create_stat_var_2d(ncid, 'twt_press',  zm_name, my_nf90_real)
+    if (level >= 1) then
+       call create_stat_var_2d(ncid, 'qwt_press', zm_name, my_nf90_real)
+       call create_stat_var_2d(ncid, 'tqt_press', zt_name, my_nf90_real)
+    end if
+
     ! x1_misc
-    nstats_x1_misc = 2
-    if (level >= 1) nstats_x1_misc = nstats_x1_misc + 2
+    nstats_x1_misc = 5
+    if (level >= 1) nstats_x1_misc = nstats_x1_misc + 3
     allocate(x1_misc(nzp,nstats_x1_misc), x1_misc_s(nzp,nstats_x1_misc)) 
     x1_misc(:,:) = 0.
-    call create_stat_var(ncid, 'b',  zm_name, my_nf90_real)
-    call create_stat_var(ncid, 'N2', zm_name, my_nf90_real)
+    call create_stat_var(ncid, 'b',        zm_name, my_nf90_real)
+    call create_stat_var(ncid, 'N2',       zm_name, my_nf90_real)
+    call create_stat_var(ncid, 'pi1',      zt_name, my_nf90_real)
+    call create_stat_var(ncid, 'wfls',     zt_name, my_nf90_real)
+    call create_stat_var(ncid, 'dthldtls', zt_name, my_nf90_real)
     if (level >= 2) then
-       call create_stat_var(ncid, 'th', zt_name, my_nf90_real)
-       call create_stat_var(ncid, 'l',  zt_name, my_nf90_real)
+       call create_stat_var(ncid, 'dqtdtls',  zt_name, my_nf90_real)
+       call create_stat_var(ncid, 'th',       zt_name, my_nf90_real)
+       call create_stat_var(ncid, 'l',        zt_name, my_nf90_real)
     end if
 
     ! x2_misc
@@ -196,6 +225,20 @@ contains
     w1_s => x1_s(:,3)
     t1_s => x1_s(:,4)
     if (level >= 1) q1_s => x1_s(:,5)
+
+    ! xt_press
+    ut_press => xt_press(:,:,1)
+    vt_press => xt_press(:,:,2)
+    wt_press => xt_press(:,:,3)
+    tt_press => xt_press(:,:,4)
+    if (level >= 1) qt_press => xt_press(:,:,5)
+
+    ! xt_press_s
+    ut_press_s => xt_press_s(:,:,1)
+    vt_press_s => xt_press_s(:,:,2)
+    wt_press_s => xt_press_s(:,:,3)
+    tt_press_s => xt_press_s(:,:,4)
+    if (level >= 1) qt_press_s => xt_press_s(:,:,5)
 
     ! xt
     ut => xt(:,:,1)
@@ -267,20 +310,56 @@ contains
        tqt_s => x2t_s(:,:,10)
     end if
 
+    ! x2t_press
+    u2t_press => x2t_press(:,:,1)
+    v2t_press => x2t_press(:,:,2)
+    w2t_press => x2t_press(:,:,3)
+    t2t_press => x2t_press(:,:,4)
+    uwt_press => x2t_press(:,:,5)
+    vwt_press => x2t_press(:,:,6)
+    twt_press => x2t_press(:,:,7)
+    if (level >= 1) then
+       q2t_press => x2t_press(:,:,8)
+       qwt_press => x2t_press(:,:,9)
+       tqt_press => x2t_press(:,:,10)
+    end if
+
+    ! x2t_press_s
+    u2t_press_s => x2t_press_s(:,:,1)
+    v2t_press_s => x2t_press_s(:,:,2)
+    w2t_press_s => x2t_press_s(:,:,3)
+    t2t_press_s => x2t_press_s(:,:,4)
+    uwt_press_s => x2t_press_s(:,:,5)
+    vwt_press_s => x2t_press_s(:,:,6)
+    twt_press_s => x2t_press_s(:,:,7)
+    if (level >= 1) then
+       q2t_press_s => x2t_press_s(:,:,8)
+       qwt_press_s => x2t_press_s(:,:,9)
+       tqt_press_s => x2t_press_s(:,:,10)
+    end if
+
     ! x1_misc
-    b1 => x1_misc(:,1)
-    N2 => x1_misc(:,2)
+    b1        => x1_misc(:,1)
+    N2        => x1_misc(:,2)
+    pi11      => x1_misc(:,3)
+    wfls1     => x1_misc(:,4)
+    dthldtls1 => x1_misc(:,5)
     if (level >= 2) then
-       th1 => x1_misc(:,2)
-       l1  => x1_misc(:,3) 
+       dqtdtls1 => x1_misc(:,6)
+       th1      => x1_misc(:,7)
+       l1       => x1_misc(:,8) 
     end if
 
     ! x1_misc_s
-    b1_s => x1_misc_s(:,1)
-    N2_s => x1_misc_s(:,2)
+    b1_s        => x1_misc_s(:,1)
+    N2_s        => x1_misc_s(:,2)
+    pi11_s      => x1_misc_s(:,3)
+    wfls1_s     => x1_misc_s(:,4)
+    dthldtls1_s => x1_misc_s(:,5)
     if (level >= 2) then
-       th1_s => x1_misc_s(:,3)
-       l1_s  => x1_misc_s(:,4) 
+       dqtdtls1_s => x1_misc_s(:,6)
+       th1_s      => x1_misc_s(:,7)
+       l1_s       => x1_misc_s(:,8) 
     end if
 
     ! x2_misc
@@ -320,9 +399,9 @@ contains
   end subroutine init_stat_slab
 
   !
-  ! sample_stat_surface
+  ! sample_stat_slab_surface
   !
-  subroutine sample_stat_surface
+  subroutine sample_stat_slab_surface
     use grid, only        : a_up, a_vp, a_wp, a_tp, a_rp, liquid, nzp, nyp, nxp, level, a_theta, vapor, &
                             zm, a_pexnr, zt, a_ut, a_vt, a_wt, a_tt, a_rt, th00, dxi, dyi, &
                             uw_sfc, vw_sfc, wt_sfc, wq_sfc
@@ -346,7 +425,7 @@ contains
     call par_sum(x_surf_s, x_surf_scratch, nstats_x_surf)
     x_surf_s(:) = x_surf_scratch(:)/real(n_s_global)
 
-  end subroutine sample_stat_surface
+  end subroutine sample_stat_slab_surface
 
   !
   ! sample_stat_slab
@@ -450,6 +529,7 @@ contains
     xt_local(:,:) = xt_scratch(:,:)/real(n_s_global)
 
     !
+    if (itype == 1) xt_s(:,:,:) = 0.
     ut_s(:,itype) = ut_local(:)
     vt_s(:,itype) = vt_local(:)
     wt_s(:,itype) = wt_local(:)
@@ -491,13 +571,16 @@ contains
     end do
     end do
 
+    !
+    x2t_s(:,itype,:) = x2t_s(:,itype,:)/real(n_s_local)
+
   end subroutine stat_slab_tendency
 
   !
   ! stat_slab_pressure
   !
-  subroutine stat_slab_pressure(itype, pp)
-    use grid, only        : a_up, a_vp, a_wp, a_tp, a_rp, liquid, nzp, nyp, nxp, level, a_theta, vapor, &
+  subroutine stat_slab_pressure(itype, u, v, w, pp)
+    use grid, only        : a_ut, a_vt, a_wt, a_tp, a_rp, liquid, nzp, nyp, nxp, level, a_theta, vapor, &
                             zm, zt, th00, dxi, dyi, a_tt, a_rt
     use modutil_mpi, only : par_sum
     use modstat_io, only  : ntypes
@@ -505,7 +588,7 @@ contains
     implicit none
 
     integer, intent(in) :: itype
-    real, intent(in)    :: pp(:,:,:)
+    real, intent(in), dimension(:,:,:) :: u, v, w, pp
 
     real :: Dp_u, Dp_v, Dp_w
     real, pointer, dimension(:) :: ut_local, vt_local, wt_local
@@ -522,9 +605,13 @@ contains
     do j = 3,nyp-2
     do i = 3,nxp-2
        do k = 2,nzp-1
-          ut_local(k) = ut_local(k) + th00*(pp(k,i+1,j) - pp(k,i,j))*dxi
-          vt_local(k) = vt_local(k) + th00*(pp(k,i,j+1) - pp(k,i,j))*dyi
-          wt_local(k) = wt_local(k) + th00*(pp(k+1,i,j) - pp(k,i,j))/(zt(k+1) - zt(k))
+          kp1 = k+1
+          ip1 = i+1
+          jp1 = j+1
+
+          ut_local(k) = ut_local(k) - th00*(pp(k,ip1,j) - pp(k,i,j))*dxi
+          vt_local(k) = vt_local(k) - th00*(pp(k,i,jp1) - pp(k,i,j))*dyi
+          wt_local(k) = wt_local(k) - th00*(pp(kp1,i,j) - pp(k,i,j))/(zt(kp1) - zt(k))
        end do
     end do
     end do
@@ -533,14 +620,15 @@ contains
     xt_local(:,:) = xt_scratch(:,:)/real(n_s_global)
 
     !
-    ut_s(:,itype) = ut_local(:)
-    vt_s(:,itype) = vt_local(:)
-    wt_s(:,itype) = wt_local(:)
-    tt_s(:,itype) = 0.
-    if (level >= 1) qt_s(:,itype) = 0.
+    if (itype == 1) xt_press_s(:,:,:) = 0.
+    ut_press_s(:,itype) = ut_local(:)
+    vt_press_s(:,itype) = vt_local(:)
+    wt_press_s(:,itype) = wt_local(:)
+    tt_press_s(:,itype) = 0.
+    if (level >= 1) qt_press_s(:,itype) = 0.
 
     ! Sample second-order statistics
-    if (itype == 1) x2t_s(:,:,:) = 0.
+    if (itype == 1) x2t_press_s(:,:,:) = 0.
     do j = 3,nyp-2
     do i = 3,nxp-2
        do k = 2,nzp-1
@@ -550,29 +638,21 @@ contains
 
           Dp_u = th00*(pp(k,ip1,j) - pp(k,i,j))*dxi
           Dp_v = th00*(pp(k,i,jp1) - pp(k,i,j))*dyi
-          Dp_w = th00*(pp(k+1,i,j) - pp(k,i,j))/(zt(k+1) - zt(k))          
+          Dp_w = th00*(pp(kp1,i,j) - pp(k,i,j))/(zt(kp1) - zt(k))          
 
-          u2t_s(k,itype) = u2t_s(k,itype) + 2.*(a_up(k,i,j) - u1_s(k))*(Dp_u - ut_s(k,itype))
-          v2t_s(k,itype) = v2t_s(k,itype) + 2.*(a_vp(k,i,j) - v1_s(k))*(Dp_v - vt_s(k,itype))
-          w2t_s(k,itype) = w2t_s(k,itype) + 2.*(a_wp(k,i,j) - w1_s(k))*(Dp_w - wt_s(k,itype))
-!          uwt_s(k,itype) = uwt_s(k,itype) + (a_wp(k,i,j) - w1_s(k))*(0.25*(a_ut(k,i,j)+a_ut(k,ip1,j)+a_ut(kp1,i,j)+a_ut(kp1,ip1,j))     &
-!                                                                     - 0.5*(ut_s(k,itype)+ut_s(kp1,itype)))                             &
-!                                          + (a_wt(k,i,j) - wt_s(k,itype))*(0.25*(a_up(k,i,j)+a_up(k,ip1,j)+a_up(kp1,i,j)+a_up(kp1,ip1,j)) &
-!                                                                           - 0.5*(u1_s(k)+u1_s(kp1)))
-!          vwt_s(k,itype) = vwt_s(k,itype) + (a_wp(k,i,j) - w1_s(k))*(0.25*(a_vt(k,i,j)+a_vt(k,i,jp1)+a_vt(kp1,i,j)+a_vt(kp1,i,jp1))     &
-!                                                                     - 0.5*(vt_s(k,itype)+vt_s(kp1,itype)))                             &
-!                                          + (a_wt(k,i,j) - wt_s(k,itype))*(0.25*(a_vp(k,i,j)+a_vp(k,i,jp1)+a_vp(kp1,i,j)+a_vp(kp1,i,jp1)) &
-!                                                                           - 0.5*(v1_s(k)+v1_s(kp1)))                                
-          twt_s(k,itype) = twt_s(k,itype) + (a_wp(k,i,j) - w1_s(k))*(0.5*(a_tt(k,i,j)+a_tt(kp1,i,j)) - 0.5*(tt_s(k,itype)+tt_s(kp1,itype))) &
-                                          + (Dp_w - wt_s(k,itype))*(0.5*(a_tp(k,i,j)+a_tp(kp1,i,j)) - 0.5*(t1_s(k)+t1_s(kp1)))
+          u2t_press_s(k,itype) = u2t_press_s(k,itype) + 2.*(u(k,i,j) - u1_s(k))*(-Dp_u - ut_press_s(k,itype))
+          v2t_press_s(k,itype) = v2t_press_s(k,itype) + 2.*(v(k,i,j) - v1_s(k))*(-Dp_v - vt_press_s(k,itype))
+          w2t_press_s(k,itype) = w2t_press_s(k,itype) + 2.*(w(k,i,j) - w1_s(k))*(-Dp_w - wt_press_s(k,itype))
+          twt_press_s(k,itype) = twt_press_s(k,itype) + (-Dp_w - wt_press_s(k,itype))*(0.5*(a_tp(k,i,j)+a_tp(kp1,i,j)) - 0.5*(t1_s(k)+t1_s(kp1)))
           if (level >= 1) then
-             qwt_s(k,itype) = qwt_s(k,itype) + (a_wp(k,i,j) - w1_s(k))*(0.5*(a_rt(k,i,j)+a_rt(kp1,i,j))        &
-                                                                        - 0.5*(qt_s(k,itype)+qt_s(kp1,itype))) &
-                                             + (Dp_w - wt_s(k,itype))*(0.5*(a_rp(k,i,j)+a_rp(kp1,i,j)) - 0.5*(q1_s(k)+q1_s(kp1)))
+             qwt_press_s(k,itype) = qwt_press_s(k,itype) + (-Dp_w - wt_press_s(k,itype))*(0.5*(a_rp(k,i,j)+a_rp(kp1,i,j)) - 0.5*(q1_s(k)+q1_s(kp1)))
           end if
        end do
     end do
     end do
+
+    ! 
+    x2t_press_s(:,itype,:) = x2t_press_s(:,itype,:)/real(n_s_local)
 
   end subroutine stat_slab_pressure
 
@@ -581,8 +661,10 @@ contains
   !
   subroutine stat_slab_misc
     use grid, only        : a_up, a_vp, a_wp, a_tp, a_rp, liquid, nzp, nyp, nxp, level, a_theta, vapor, &
-                            zm, a_pexnr, zt, a_ut, a_vt, a_wt, a_tt, a_rt, th00, dxi, dyi, a_scr1
+                            zm, a_pexnr, zt, a_ut, a_vt, a_wt, a_tt, a_rt, th00, dxi, dyi, a_scr1, pi1, &
+                            wfls, dthldtls, dqtdtls
     use modutil_mpi, only : par_sum
+    use defs, only        : cp
     implicit none
 
     real, allocatable, dimension(:,:), target :: x1_misc_scratch
@@ -605,6 +687,12 @@ contains
     allocate(x1_misc_scratch(nzp,nstats_x1_misc))
     call par_sum(x1_misc_s, x1_misc_scratch, nzp*nstats_x1_misc)
     x1_misc_s(:,:) = x1_misc_scratch(:,:)/real(n_s_global)
+
+    !
+    pi11_s(:)      = pi1(:)/cp
+    wfls1_s(:)     = wfls(:)
+    dthldtls1_s(:) = dthldtls(:)
+    dqtdtls1_s(:)  = dqtdtls(:)
 
     ! Compute N**2. from buoyancy profile temporarily stored in N2
     N2_s(2:nzp-1) = (N2_s(3:nzp) - N2_s(2:nzp-1))/(zm(3:nzp) - zm(2:nzp-1))
@@ -652,9 +740,6 @@ contains
 
     real :: f
     integer :: itype
-
-    !
-    x2t_s(:,:,:) = x2t_s(:,:,:)/real(n_s_local)
 
     !
     f = real(n_s_local)/real(n_s_local + n_local)
@@ -714,12 +799,32 @@ contains
                                                                   + f*(1. - f)*(tt_s(:,itype) - tt(:,itype))*(q1_s(:) - q1(:))
        end if
     end do
+
+    !
+    do itype = 1,ntypes
+       u2t_press(:,itype) = f*u2t_press_s(:,itype) + (1. - f)*u2t_press(:,itype) + 2.*f*(1. - f)*(u1_s(:) - u1(:))*(ut_press_s(:,itype) - ut_press(:,itype))
+       v2t_press(:,itype) = f*v2t_press_s(:,itype) + (1. - f)*v2t_press(:,itype) + 2.*f*(1. - f)*(v1_s(:) - v1(:))*(vt_press_s(:,itype) - vt_press(:,itype))
+       w2t_press(:,itype) = f*w2t_press_s(:,itype) + (1. - f)*w2t_press(:,itype) + 2.*f*(1. - f)*(w1_s(:) - w1(:))*(wt_press_s(:,itype) - wt_press(:,itype))
+       uwt_press(:,itype) = f*uwt_press_s(:,itype) + (1. - f)*uwt_press(:,itype) + f*(1. - f)*(w1_s(:) - w1(:))*(ut_press_s(:,itype) - ut_press(:,itype)) &
+                                                               + f*(1. - f)*(wt_press_s(:,itype) - wt_press(:,itype))*(u1_s(:) - u1(:))
+       vwt_press(:,itype) = f*vwt_press_s(:,itype) + (1. - f)*vwt_press(:,itype) + f*(1. - f)*(w1_s(:) - w1(:))*(vt_press_s(:,itype) - vt_press(:,itype)) &
+                                                               + f*(1. - f)*(wt_press_s(:,itype) - wt_press(:,itype))*(v1_s(:) - v1(:))
+       twt_press(:,itype) = f*twt_press_s(:,itype) + (1. - f)*twt_press(:,itype) + f*(1. - f)*(w1_s(:) - w1(:))*(tt_press_s(:,itype) - tt_press(:,itype)) &
+                                                               + f*(1. - f)*(wt_press_s(:,itype) - wt_press(:,itype))*(t1_s(:) - t1(:))
+       if (level >= 1) then
+          qwt_press(:,itype) = f*qwt_press_s(:,itype) + (1. - f)*qwt_press(:,itype) + f*(1. - f)*(w1_s(:) - w1(:))*(qt_press_s(:,itype) - qt_press(:,itype)) &
+                                                                  + f*(1. - f)*(wt_press_s(:,itype) - wt_press(:,itype))*(q1_s(:) - q1(:))
+          tqt_press(:,itype) = f*tqt_press_s(:,itype) + (1. - f)*tqt_press(:,itype) + f*(1. - f)*(t1_s(:) - t1(:))*(qt_press_s(:,itype) - qt_press(:,itype)) &
+                                                                  + f*(1. - f)*(tt_press_s(:,itype) - tt_press(:,itype))*(q1_s(:) - q1(:))
+       end if
+    end do
  
     ! Update first-order mean and tendency statistics
-    x1(:,:)      = f*x1_s(:,:)      + (1. - f)*x1(:,:)
-    xt(:,:,:)    = f*xt_s(:,:,:)    + (1. - f)*xt(:,:,:)
-    x1_misc(:,:) = f*x1_misc_s(:,:) + (1. - f)*x1_misc(:,:)
-    x_surf(:)    = f*x_surf_s(:)    + (1. - f)*x_surf(:)
+    x1(:,:)         = f*x1_s(:,:)         + (1. - f)*x1(:,:)
+    xt(:,:,:)       = f*xt_s(:,:,:)       + (1. - f)*xt(:,:,:)
+    xt_press(:,:,:) = f*xt_press_s(:,:,:) + (1. - f)*xt_press(:,:,:)
+    x1_misc(:,:)    = f*x1_misc_s(:,:)    + (1. - f)*x1_misc(:,:)
+    x_surf(:)       = f*x_surf_s(:)       + (1. - f)*x_surf(:)
 
     ! Update sample counts
     n_local  = n_local  + n_s_local
@@ -752,13 +857,15 @@ contains
 
     ! Separate tendencies
     do istat = 1,nstats_x1
-       do itype = ntypes-1,2,-1
-          xt(:,itype,istat) = xt(:,itype,istat) - xt(:,itype-1,istat)
+       do itype = ntypes,2,-1
+          xt(:,itype,istat)       = xt(:,itype,istat)       - xt(:,itype-1,istat)
+          xt_press(:,itype,istat) = xt_press(:,itype,istat) - xt_press(:,itype-1,istat)
        end do
     end do
     do istat = 1,nstats_x2
-       do itype = ntypes-1,2,-1
-          x2t(:,itype,istat) = x2t(:,itype,istat) - x2t(:,itype-1,istat)
+       do itype = ntypes,2,-1
+          x2t(:,itype,istat)       = x2t(:,itype,istat)       - x2t(:,itype-1,istat)
+          x2t_press(:,itype,istat) = x2t_press(:,itype,istat) - x2t_press(:,itype-1,istat)
        end do
     end do
 
@@ -779,6 +886,10 @@ contains
     call write_stat_var(ncid, 'wt', wt, irec)
     call write_stat_var(ncid, 'tt', tt, irec)
     if (level >= 1) call write_stat_var(ncid, 'qt', qt, irec)
+
+    call write_stat_var(ncid, 'ut_press', ut_press, irec)
+    call write_stat_var(ncid, 'vt_press', vt_press, irec)
+    call write_stat_var(ncid, 'wt_press', wt_press, irec)
 
     call write_stat_var(ncid, 'uw_surf', uw_surf1, irec)
     call write_stat_var(ncid, 'vw_surf', vw_surf1, irec)
@@ -811,11 +922,26 @@ contains
        call write_stat_var(ncid, 'tqt', tqt, irec)
     end if
 
-    call write_stat_var(ncid, 'b',  b1, irec)
-    call write_stat_var(ncid, 'N2', N2, irec)
+    call write_stat_var(ncid, 'u2t_press', u2t_press, irec)
+    call write_stat_var(ncid, 'v2t_press', v2t_press, irec)
+    call write_stat_var(ncid, 'w2t_press', w2t_press, irec)
+    call write_stat_var(ncid, 'uwt_press', uwt_press, irec)    
+    call write_stat_var(ncid, 'vwt_press', vwt_press, irec)
+    call write_stat_var(ncid, 'twt_press', twt_press, irec)
+    if (level >= 1) then
+       call write_stat_var(ncid, 'qwt_press', qwt_press, irec)
+       call write_stat_var(ncid, 'tqt_press', tqt_press, irec)
+    end if
+
+    call write_stat_var(ncid, 'b',        b1,        irec)
+    call write_stat_var(ncid, 'N2',       N2,        irec)
+    call write_stat_var(ncid, 'pi1',      pi11,      irec)
+    call write_stat_var(ncid, 'wfls',     wfls1,     irec)
+    call write_stat_var(ncid, 'dthldtls', dthldtls1, irec)
     if (level >= 2) then
-       call write_stat_var(ncid, 'th', th1, irec)
-       call write_stat_var(ncid, 'l', l1, irec)
+       call write_stat_var(ncid, 'dqtdtls', dqtdtls1, irec)
+       call write_stat_var(ncid, 'th',      th1,      irec)
+       call write_stat_var(ncid, 'l',       l1,       irec)
     end if
 
     call write_stat_var(ncid, 'b2',  b2,  irec)
@@ -832,13 +958,15 @@ contains
     n_local  = 0.
     n_global = 0.
 
-    x1(:,:)      = 0.
-    xt(:,:,:)    = 0.
-    x2(:,:)      = 0.
-    x2t(:,:,:)   = 0.
-    x1_misc(:,:) = 0.
-    x2_misc(:,:) = 0.
-    x_surf(:)    = 0.
+    x1(:,:)          = 0.
+    xt(:,:,:)        = 0.
+    xt_press(:,:,:)  = 0.
+    x2(:,:)          = 0.
+    x2t(:,:,:)       = 0.
+    x2t_press(:,:,:) = 0.
+    x1_misc(:,:)     = 0.
+    x2_misc(:,:)     = 0.
+    x_surf(:)        = 0.
 
   end subroutine write_stat_slab
 

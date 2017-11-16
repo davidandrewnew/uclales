@@ -20,7 +20,7 @@
 module modstat_io
   implicit none
 
-  integer, parameter :: ntypes = 7
+  integer, parameter :: ntypes = 6
 
   character(*), parameter :: time_name = 'time'
   character(*), parameter :: rank_name = 'rank'
@@ -59,6 +59,7 @@ contains
     integer              :: i
     integer, allocatable :: rank_values(:), type_values(:)
     real, allocatable    :: pi0_by_cp(:)
+    real                 :: cp_copy, alvl_copy, R_copy
 
     ! Create file
     call create_file(name, ncid)
@@ -99,13 +100,17 @@ contains
     call create_var(ncid, 'fsttm', my_nf90_real, (/time_name/))
     call create_var(ncid, 'lsttm', my_nf90_real, (/time_name/))
 
-    ! Write parameters
-!    call write_var(ncid, 'cp',   cp)
-!    call write_var(ncid, 'alvl', alvl)
-!    call write_var(ncid, 'R',    R)
-
+    ! Needed for intent(inout) with parameter
+    cp_copy   = cp
+    alvl_copy = alvl
+    R_copy    = R
     allocate(pi0_by_cp(nzp))
     pi0_by_cp(:) = pi0(:)/cp
+
+    ! Write parameters
+    call write_var(ncid, 'cp',   cp_copy)
+    call write_var(ncid, 'alvl', alvl_copy)
+    call write_var(ncid, 'R',    R_copy)
 
     call write_var(ncid, 'dn0', dn0)
     call write_var(ncid, 'pi0', pi0_by_cp)
@@ -177,6 +182,8 @@ contains
   !
   subroutine advance_stat_time(time, fsttm, nsmp, ncid, irec)
     use netcdf_interface, only : write_var
+    use grid, only             : pi1, nzp
+    use defs, only             : cp
     implicit none
 
     real, intent(in)     :: time, fsttm
@@ -196,9 +203,9 @@ contains
 
     ! Write to disk
     call write_var(ncid, time_name, time_copy, irec)
-    call write_var(ncid, 'nsmp',  nsmp_copy,  irec)
-    call write_var(ncid, 'fsttm', fsttm_copy, irec)
-    call write_var(ncid, 'lsttm', time_copy,  irec)
+    call write_var(ncid, 'nsmp',  nsmp_copy,   irec)
+    call write_var(ncid, 'fsttm', fsttm_copy,  irec)
+    call write_var(ncid, 'lsttm', time_copy,   irec)
 
   end subroutine advance_stat_time
 
