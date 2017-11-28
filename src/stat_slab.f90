@@ -34,6 +34,8 @@ real, dimension(:,:), pointer :: ut, vt, wt, tt, qt, ut_s, vt_s, wt_s, tt_s, qt_
                                  u2t_s, v2t_s, w2t_s, t2t_s, q2t_s, uwt_s, vwt_s, twt_s, qwt_s, tqt_s, &
                                  u2t_press_s, v2t_press_s, w2t_press_s, t2t_press_s, q2t_press_s, uwt_press_s, vwt_press_s, twt_press_s, qwt_press_s, tqt_press_s
 real, dimension(:), pointer :: b1, N2, pi11, wfls1, dthldtls1, dqtdtls1, th1, l1, &
+                               e, et_diss, et_shear, e_s, et_diss_s, et_shear_s, &
+                               twt_sfs, twt_sfs_s, qwt_sfs, qwt_sfs_s, &
                                b1_s, N2_s, pi11_s, wfls1_s, dthldtls1_s, dqtdtls1_s, th1_s, l1_s, &
                                b2, bw, thb, lb, w3, tw2, qw2, bw2, t2w, q2w, b2w, &
                                b2_s, bw_s, thb_s, lb_s, w3_s, tw2_s, qw2_s, bw2_s, t2w_s, q2w_s, b2w_s
@@ -157,19 +159,24 @@ contains
     end if
 
     ! x1_misc
-    nstats_x1_misc = 5
-    if (level >= 1) nstats_x1_misc = nstats_x1_misc + 3
+    nstats_x1_misc = 9
+    if (level >= 1) nstats_x1_misc = nstats_x1_misc + 4
     allocate(x1_misc(nzp,nstats_x1_misc), x1_misc_s(nzp,nstats_x1_misc)) 
     x1_misc(:,:) = 0.
-    call create_stat_var(ncid, 'b',        zm_name, my_nf90_real)
-    call create_stat_var(ncid, 'N2',       zm_name, my_nf90_real)
-    call create_stat_var(ncid, 'pi1',      zt_name, my_nf90_real)
-    call create_stat_var(ncid, 'wfls',     zt_name, my_nf90_real)
-    call create_stat_var(ncid, 'dthldtls', zt_name, my_nf90_real)
+    call create_stat_var(ncid, 'b',         zm_name, my_nf90_real)
+    call create_stat_var(ncid, 'N2',        zm_name, my_nf90_real)
+    call create_stat_var(ncid, 'pi1',       zt_name, my_nf90_real)
+    call create_stat_var(ncid, 'wfls',      zt_name, my_nf90_real)
+    call create_stat_var(ncid, 'dthldtls',  zt_name, my_nf90_real)
+    call create_stat_var(ncid, 'e',         zm_name, my_nf90_real)
+    call create_stat_var(ncid, 'et_shear',  zm_name, my_nf90_real)
+    call create_stat_var(ncid, 'et_diss',   zm_name, my_nf90_real)
+    call create_stat_var(ncid, 'twt_sfs',   zm_name, my_nf90_real)
     if (level >= 2) then
        call create_stat_var(ncid, 'dqtdtls',  zt_name, my_nf90_real)
        call create_stat_var(ncid, 'th',       zt_name, my_nf90_real)
        call create_stat_var(ncid, 'l',        zt_name, my_nf90_real)
+       call create_stat_var(ncid, 'qwt_sfs',   zm_name, my_nf90_real)
     end if
 
     ! x2_misc
@@ -344,10 +351,15 @@ contains
     pi11      => x1_misc(:,3)
     wfls1     => x1_misc(:,4)
     dthldtls1 => x1_misc(:,5)
+    e         => x1_misc(:,6)
+    et_shear  => x1_misc(:,7)
+    et_diss   => x1_misc(:,8)
+    twt_sfs   => x1_misc(:,9)
     if (level >= 2) then
-       dqtdtls1 => x1_misc(:,6)
-       th1      => x1_misc(:,7)
-       l1       => x1_misc(:,8) 
+       dqtdtls1 => x1_misc(:,10)
+       th1      => x1_misc(:,11)
+       l1       => x1_misc(:,12)
+       qwt_sfs  => x1_misc(:,13) 
     end if
 
     ! x1_misc_s
@@ -356,10 +368,15 @@ contains
     pi11_s      => x1_misc_s(:,3)
     wfls1_s     => x1_misc_s(:,4)
     dthldtls1_s => x1_misc_s(:,5)
+    e_s         => x1_misc_s(:,6)
+    et_shear_s  => x1_misc_s(:,7)
+    et_diss_s   => x1_misc_s(:,8)
+    twt_sfs_s   => x1_misc_s(:,9)
     if (level >= 2) then
-       dqtdtls1_s => x1_misc_s(:,6)
-       th1_s      => x1_misc_s(:,7)
-       l1_s       => x1_misc_s(:,8) 
+       dqtdtls1_s => x1_misc_s(:,10)
+       th1_s      => x1_misc_s(:,11)
+       l1_s       => x1_misc_s(:,12) 
+       qwt_sfs_s  => x1_misc_s(:,13) 
     end if
 
     ! x2_misc
@@ -657,6 +674,38 @@ contains
   end subroutine stat_slab_pressure
 
   !
+  ! stat_slab_sfs
+  !
+  subroutine stat_slab_sfs(csx, delta, pr, km, kh, ri)
+    use defs, only : pi
+    use grid, only : nxp, nyp, nzp, dn0, a_tp, a_rp, zt, level
+    implicit none
+
+    real, intent(in)                   :: csx, delta, pr
+    real, dimension(:,:,:), intent(in) :: km, kh, ri
+
+    integer :: i, j, k
+    real :: km_temp, e_temp
+
+    x1_misc_s(:,:) = 0.
+    do j = 3,nyp-2
+    do i = 3,nxp-2
+       do k = 2,nzp-1
+          km_temp = km(k,i,j)/(0.5*(dn0(k)+dn0(k+1)))
+          e_temp  = km_temp**2./(delta*pi*(csx**2))**2
+
+          e_s(k)        = e_s(k)        + e_temp
+          et_shear_s(k) = et_shear_s(k) + km_temp*kh(k,i,j)/(1. - ri(k,i,j)/pr)
+          et_diss_s(k)  = et_diss_s(k)  + km_temp*kh(k,i,j)
+          twt_sfs_s(k)  = twt_sfs_s(k)  - (2./3.)*e_temp*(a_tp(k+1,i,j) - a_tp(k,i,j))/(zt(k+1) - zt(k))
+          if (level >= 1) qwt_sfs_s(k)  = qwt_sfs_s(k)  - (2./3.)*e_temp*(a_rp(k+1,i,j) - a_rp(k,i,j))/(zt(k+1) - zt(k))
+       end do
+    end do
+    end do
+
+  end subroutine stat_slab_sfs
+
+  !
   ! stat_slab_misc
   !
   subroutine stat_slab_misc
@@ -671,7 +720,7 @@ contains
     integer :: i, j, k, kp1
 
     ! Sample first-order statistics
-    x1_misc_s(:,:) = 0.
+!    x1_misc_s(:,:) = 0.
     do j = 3,nyp-2
     do i = 3,nxp-2
        do k = 1,nzp
@@ -748,20 +797,20 @@ contains
     w3(:)  = f*w3_s(:)  + (1. - f)*w3(:)  
     b2w(:) = f*b2w_s(:) + (1. - f)*b2w(:) + 2.*f*(1. - f)*(b1_s(:) - b1(:))*(bw_s(:) - bw(:))
     t2w(2:nzp-1) = f*t2w_s(2:nzp-1) + (1. - f)*t2w(2:nzp-1) &
-         + 2.*f*(1. - f)*(0.5*(t1_s(2:nzp-1)+t1_s(3:nzp)) - 0.5*(t1(2:nzp-1)+t1(3:nzp)))*(tw_s(2:nzp-1) - tw(2:nzp-1))
+                 + 2.*f*(1. - f)*(0.5*(t1_s(2:nzp-1)+t1_s(3:nzp)) - 0.5*(t1(2:nzp-1)+t1(3:nzp)))*(tw_s(2:nzp-1) - tw(2:nzp-1))
     bw2(:) = f*bw2_s(:) + (1. - f)*bw2(:) + f*(1. - f)*(b1_s(:) - b1(:))*(w2_s(:) - w2(:))                                           
     tw2(2:nzp-1) = f*tw2_s(2:nzp-1) + (1. - f)*tw2(2:nzp-1) &
-         + f*(1. - f)*(0.5*(t1_s(2:nzp-1)+t1_s(3:nzp)) - 0.5*(t1(2:nzp-1)+t1(3:nzp)))*(w2_s(2:nzp-1) - w2(2:nzp-1))
+                 + f*(1. - f)*(0.5*(t1_s(2:nzp-1)+t1_s(3:nzp)) - 0.5*(t1(2:nzp-1)+t1(3:nzp)))*(w2_s(2:nzp-1) - w2(2:nzp-1))
     if (level >= 1) then
        q2w(2:nzp-1) = f*q2w_s(2:nzp-1) + (1. - f)*q2w(2:nzp-1) &
-            + 2.*f*(1. - f)*(0.5*(q1_s(2:nzp-1)+q1_s(3:nzp)) - 0.5*(q1(2:nzp-1)+q1(3:nzp)))*(qw_s(2:nzp-1) - qw(2:nzp-1))
+                    + 2.*f*(1. - f)*(0.5*(q1_s(2:nzp-1)+q1_s(3:nzp)) - 0.5*(q1(2:nzp-1)+q1(3:nzp)))*(qw_s(2:nzp-1) - qw(2:nzp-1))
        qw2(2:nzp-1) = f*qw2_s(2:nzp-1) + (1. - f)*qw2(2:nzp-1) &
-            + f*(1. - f)*(0.5*(q1_s(2:nzp-1)+q1_s(3:nzp)) - 0.5*(q1(2:nzp-1)+q1(3:nzp)))*(w2_s(2:nzp-1) - w2(2:nzp-1))
+                    + f*(1. - f)*(0.5*(q1_s(2:nzp-1)+q1_s(3:nzp)) - 0.5*(q1(2:nzp-1)+q1(3:nzp)))*(w2_s(2:nzp-1) - w2(2:nzp-1))
     end if
 
     ! Update second-order diagnostic variable statistics
     b2(:)  = f*b2_s(:)  + (1. - f)*b2(:)  + f*(1. - f)*(b1_s(:) - b1(:))**2.
-    bw(:)  = f*bw_s(:)  + (1. - f)*bw(:)  + f*(1. - f)*(b1_s(:) - b1(:))*(w1_s(:) - w1(:))
+    bw(:)  = f*bw_s(:)  + (1. - f)*bw(:)  
     thb(:) = f*thb_s(:) + (1. - f)*thb(:) + f*(1. - f)*(th1_s(:) - th1(:))*(b1_s(:) - b1(:))
     lb(:)  = f*lb_s(:)  + (1. - f)*lb(:)  + f*(1. - f)*(l1_s(:) - l1(:))*(b1_s(:) - b1(:))
 
@@ -770,12 +819,12 @@ contains
     v2(:) = f*v2_s(:) + (1. - f)*v2(:) + f*(1. - f)*(v1_s(:) - v1(:))**2.
     w2(:) = f*w2_s(:) + (1. - f)*w2(:) + f*(1. - f)*(w1_s(:) - w1(:))**2.
     t2(:) = f*t2_s(:) + (1. - f)*t2(:) + f*(1. - f)*(t1_s(:) - t1(:))**2.
-    uw(:) = f*uw_s(:) + (1. - f)*uw(:) + f*(1. - f)*(w1_s(:) - w1(:))*(u1_s(:) - u1(:))
-    vw(:) = f*vw_s(:) + (1. - f)*vw(:) + f*(1. - f)*(w1_s(:) - w1(:))*(v1_s(:) - v1(:))
-    tw(:) = f*tw_s(:) + (1. - f)*tw(:) + f*(1. - f)*(w1_s(:) - w1(:))*(t1_s(:) - t1(:))
+    uw(:) = f*uw_s(:) + (1. - f)*uw(:) 
+    vw(:) = f*vw_s(:) + (1. - f)*vw(:) 
+    tw(:) = f*tw_s(:) + (1. - f)*tw(:) 
     if (level >= 1) then
        q2(:) = f*q2_s(:) + (1. - f)*q2(:) + f*(1. - f)*(q1_s(:) - q1(:))**2.
-       qw(:) = f*qw_s(:) + (1. - f)*qw(:) + f*(1. - f)*(w1_s(:) - w1(:))*(q1_s(:) - q1(:))
+       qw(:) = f*qw_s(:) + (1. - f)*qw(:) 
        tq(:) = f*tq_s(:) + (1. - f)*tq(:) + f*(1. - f)*(t1_s(:) - t1(:))*(q1_s(:) - q1(:))
     end if
 
@@ -785,16 +834,20 @@ contains
        v2t(:,itype) = f*v2t_s(:,itype) + (1. - f)*v2t(:,itype) + 2.*f*(1. - f)*(v1_s(:) - v1(:))*(vt_s(:,itype) - vt(:,itype))
        w2t(:,itype) = f*w2t_s(:,itype) + (1. - f)*w2t(:,itype) + 2.*f*(1. - f)*(w1_s(:) - w1(:))*(wt_s(:,itype) - wt(:,itype))
        t2t(:,itype) = f*t2t_s(:,itype) + (1. - f)*t2t(:,itype) + 2.*f*(1. - f)*(t1_s(:) - t1(:))*(tt_s(:,itype) - tt(:,itype))
-       uwt(:,itype) = f*uwt_s(:,itype) + (1. - f)*uwt(:,itype) + f*(1. - f)*(w1_s(:) - w1(:))*(ut_s(:,itype) - ut(:,itype)) &
-                                                               + f*(1. - f)*(wt_s(:,itype) - wt(:,itype))*(u1_s(:) - u1(:))
-       vwt(:,itype) = f*vwt_s(:,itype) + (1. - f)*vwt(:,itype) + f*(1. - f)*(w1_s(:) - w1(:))*(vt_s(:,itype) - vt(:,itype)) &
-                                                               + f*(1. - f)*(wt_s(:,itype) - wt(:,itype))*(v1_s(:) - v1(:))
-       twt(:,itype) = f*twt_s(:,itype) + (1. - f)*twt(:,itype) + f*(1. - f)*(w1_s(:) - w1(:))*(tt_s(:,itype) - tt(:,itype)) &
-                                                               + f*(1. - f)*(wt_s(:,itype) - wt(:,itype))*(t1_s(:) - t1(:))
+       uwt(2:nzp-1,itype) = f*uwt_s(2:nzp-2,itype) + (1. - f)*uwt(2:nzp-1,itype) & 
+                          + f*(1. - f)*(wt_s(2:nzp-1,itype) - wt(2:nzp-1,itype))&
+                            *(0.5*(u1_s(2:nzp-1)+u1_s(3:nzp)) - 0.5*(u1(2:nzp-1)+u1(3:nzp)))
+       vwt(2:nzp-1,itype) = f*vwt_s(2:nzp-2,itype) + (1. - f)*vwt(2:nzp-1,itype) & 
+                          + f*(1. - f)*(wt_s(2:nzp-1,itype) - wt(2:nzp-1,itype))&
+                            *(0.5*(v1_s(2:nzp-1)+v1_s(3:nzp)) - 0.5*(v1(2:nzp-1)+v1(3:nzp)))
+       twt(2:nzp-1,itype) = f*twt_s(2:nzp-2,itype) + (1. - f)*twt(2:nzp-1,itype) & 
+                          + f*(1. - f)*(wt_s(2:nzp-1,itype) - wt(2:nzp-1,itype))&
+                            *(0.5*(t1_s(2:nzp-1)+t1_s(3:nzp)) - 0.5*(t1(2:nzp-1)+t1(3:nzp)))
        if (level >= 1) then
           q2t(:,itype) = f*q2t_s(:,itype) + (1. - f)*q2t(:,itype) + 2.*f*(1. - f)*(q1_s(:) - q1(:))*(qt_s(:,itype) - qt(:,itype))
-          qwt(:,itype) = f*qwt_s(:,itype) + (1. - f)*qwt(:,itype) + f*(1. - f)*(w1_s(:) - w1(:))*(qt_s(:,itype) - qt(:,itype)) &
-                                                                  + f*(1. - f)*(wt_s(:,itype) - wt(:,itype))*(q1_s(:) - q1(:))
+          qwt(2:nzp-1,itype) = f*qwt_s(2:nzp-2,itype) + (1. - f)*qwt(2:nzp-1,itype) & 
+                             + f*(1. - f)*(wt_s(2:nzp-1,itype) - wt(2:nzp-1,itype))&
+                               *(0.5*(q1_s(2:nzp-1)+q1_s(3:nzp)) - 0.5*(q1(2:nzp-1)+q1(3:nzp)))
           tqt(:,itype) = f*tqt_s(:,itype) + (1. - f)*tqt(:,itype) + f*(1. - f)*(t1_s(:) - t1(:))*(qt_s(:,itype) - qt(:,itype)) &
                                                                   + f*(1. - f)*(tt_s(:,itype) - tt(:,itype))*(q1_s(:) - q1(:))
        end if
@@ -802,20 +855,28 @@ contains
 
     !
     do itype = 1,ntypes
-       u2t_press(:,itype) = f*u2t_press_s(:,itype) + (1. - f)*u2t_press(:,itype) + 2.*f*(1. - f)*(u1_s(:) - u1(:))*(ut_press_s(:,itype) - ut_press(:,itype))
-       v2t_press(:,itype) = f*v2t_press_s(:,itype) + (1. - f)*v2t_press(:,itype) + 2.*f*(1. - f)*(v1_s(:) - v1(:))*(vt_press_s(:,itype) - vt_press(:,itype))
-       w2t_press(:,itype) = f*w2t_press_s(:,itype) + (1. - f)*w2t_press(:,itype) + 2.*f*(1. - f)*(w1_s(:) - w1(:))*(wt_press_s(:,itype) - wt_press(:,itype))
-       uwt_press(:,itype) = f*uwt_press_s(:,itype) + (1. - f)*uwt_press(:,itype) + f*(1. - f)*(w1_s(:) - w1(:))*(ut_press_s(:,itype) - ut_press(:,itype)) &
-                                                               + f*(1. - f)*(wt_press_s(:,itype) - wt_press(:,itype))*(u1_s(:) - u1(:))
-       vwt_press(:,itype) = f*vwt_press_s(:,itype) + (1. - f)*vwt_press(:,itype) + f*(1. - f)*(w1_s(:) - w1(:))*(vt_press_s(:,itype) - vt_press(:,itype)) &
-                                                               + f*(1. - f)*(wt_press_s(:,itype) - wt_press(:,itype))*(v1_s(:) - v1(:))
-       twt_press(:,itype) = f*twt_press_s(:,itype) + (1. - f)*twt_press(:,itype) + f*(1. - f)*(w1_s(:) - w1(:))*(tt_press_s(:,itype) - tt_press(:,itype)) &
-                                                               + f*(1. - f)*(wt_press_s(:,itype) - wt_press(:,itype))*(t1_s(:) - t1(:))
+       u2t_press(:,itype) = f*u2t_press_s(:,itype) + (1. - f)*u2t_press(:,itype) &
+                          + 2.*f*(1. - f)*(u1_s(:) - u1(:))*(ut_press_s(:,itype) - ut_press(:,itype))
+       v2t_press(:,itype) = f*v2t_press_s(:,itype) + (1. - f)*v2t_press(:,itype) &
+                          + 2.*f*(1. - f)*(v1_s(:) - v1(:))*(vt_press_s(:,itype) - vt_press(:,itype))
+       w2t_press(:,itype) = f*w2t_press_s(:,itype) + (1. - f)*w2t_press(:,itype) &
+                          + 2.*f*(1. - f)*(w1_s(:) - w1(:))*(wt_press_s(:,itype) - wt_press(:,itype))
+       uwt_press(2:nzp-1,itype) = f*uwt_press_s(2:nzp-1,itype) + (1. - f)*uwt_press(2:nzp-1,itype) &
+                                + f*(1. - f)*(wt_press_s(2:nzp-1,itype) - wt_press(2:nzp-1,itype))&
+                                  *(0.5*(u1_s(2:nzp-1)+u1_s(3:nzp)) - 0.5*(u1(2:nzp-1)+u1(3:nzp)))
+       vwt_press(2:nzp-1,itype) = f*vwt_press_s(2:nzp-1,itype) + (1. - f)*vwt_press(2:nzp-1,itype) &
+                                + f*(1. - f)*(wt_press_s(2:nzp-1,itype) - wt_press(2:nzp-1,itype))&
+                                  *(0.5*(v1_s(2:nzp-1)+v1_s(3:nzp)) - 0.5*(v1(2:nzp-1)+v1(3:nzp)))
+       twt_press(2:nzp-1,itype) = f*twt_press_s(2:nzp-1,itype) + (1. - f)*twt_press(2:nzp-1,itype) &
+                                + f*(1. - f)*(wt_press_s(2:nzp-1,itype) - wt_press(2:nzp-1,itype))&
+                                  *(0.5*(t1_s(2:nzp-1)+t1_s(3:nzp)) - 0.5*(t1(2:nzp-1)+t1(3:nzp)))
        if (level >= 1) then
-          qwt_press(:,itype) = f*qwt_press_s(:,itype) + (1. - f)*qwt_press(:,itype) + f*(1. - f)*(w1_s(:) - w1(:))*(qt_press_s(:,itype) - qt_press(:,itype)) &
-                                                                  + f*(1. - f)*(wt_press_s(:,itype) - wt_press(:,itype))*(q1_s(:) - q1(:))
-          tqt_press(:,itype) = f*tqt_press_s(:,itype) + (1. - f)*tqt_press(:,itype) + f*(1. - f)*(t1_s(:) - t1(:))*(qt_press_s(:,itype) - qt_press(:,itype)) &
-                                                                  + f*(1. - f)*(tt_press_s(:,itype) - tt_press(:,itype))*(q1_s(:) - q1(:))
+          qwt_press(2:nzp-1,itype) = f*qwt_press_s(2:nzp-1,itype) + (1. - f)*qwt_press(2:nzp-1,itype) &
+                                   + f*(1. - f)*(wt_press_s(2:nzp-1,itype) - wt_press(2:nzp-1,itype))&
+                                     *(0.5*(q1_s(2:nzp-1)+q1_s(3:nzp)) - 0.5*(q1(2:nzp-1)+q1(3:nzp)))
+          tqt_press(:,itype) = f*tqt_press_s(:,itype) + (1. - f)*tqt_press(:,itype) &
+                             + f*(1. - f)*(t1_s(:) - t1(:))*(qt_press_s(:,itype) - qt_press(:,itype)) &
+                             + f*(1. - f)*(tt_press_s(:,itype) - tt_press(:,itype))*(q1_s(:) - q1(:))
        end if
     end do
  
@@ -933,15 +994,20 @@ contains
        call write_stat_var(ncid, 'tqt_press', tqt_press, irec)
     end if
 
-    call write_stat_var(ncid, 'b',        b1,        irec)
-    call write_stat_var(ncid, 'N2',       N2,        irec)
-    call write_stat_var(ncid, 'pi1',      pi11,      irec)
-    call write_stat_var(ncid, 'wfls',     wfls1,     irec)
-    call write_stat_var(ncid, 'dthldtls', dthldtls1, irec)
+    call write_stat_var(ncid, 'b',         b1,        irec)
+    call write_stat_var(ncid, 'N2',        N2,        irec)
+    call write_stat_var(ncid, 'pi1',       pi11,      irec)
+    call write_stat_var(ncid, 'wfls',      wfls1,     irec)
+    call write_stat_var(ncid, 'dthldtls',  dthldtls1, irec)
+    call write_stat_var(ncid, 'e',         e,         irec)
+    call write_stat_var(ncid, 'et_shear',  et_shear,  irec)
+    call write_stat_var(ncid, 'et_diss',   et_diss,   irec)
+    call write_stat_var(ncid, 'twt_sfs',   twt_sfs,   irec)
     if (level >= 2) then
        call write_stat_var(ncid, 'dqtdtls', dqtdtls1, irec)
        call write_stat_var(ncid, 'th',      th1,      irec)
        call write_stat_var(ncid, 'l',       l1,       irec)
+       call write_stat_var(ncid, 'qwt_sfs', qwt_sfs,  irec)
     end if
 
     call write_stat_var(ncid, 'b2',  b2,  irec)

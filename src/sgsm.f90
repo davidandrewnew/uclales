@@ -62,7 +62,9 @@ contains
   ! SUBROUTINE DIFFUSE: Driver for calculating sub-grid fluxes (thus it
   ! includes call to surface routines) 
   !
-  subroutine diffuse(timein)
+! DAN
+!  subroutine diffuse(timein)
+  subroutine diffuse(timein, sflg) ! DAN
 
     use grid, only : newvar, nstep, a_up, a_ut, a_vp, a_vt, a_wp, a_wt       &
          ,a_rp, a_tp, a_sp, a_st, vapor, a_pexnr, a_theta,a_km               &
@@ -75,6 +77,7 @@ contains
     use thrm, only         : bruvais, fll_tkrs
 
     real, intent(in)       :: timein 
+    logical, intent(in)    :: sflg ! DAN
     integer :: n
 
     ! Hack BvS: slowly increase smago constant...
@@ -104,9 +107,7 @@ contains
     ! ----------
     ! Calculate Eddy Viscosity/Diffusivity 
     !
-! Disabling old statisitcs interface (DAN)
-!    call smagor(nzp,nxp,nyp,sflg,dxi,dyi,dn0,a_scr3,a_scr2,a_km,a_scr7,zm)
-    call smagor(nzp,nxp,nyp,.false.,dxi,dyi,dn0,a_scr3,a_scr2,a_km,a_scr7,zm)
+    call smagor(nzp,nxp,nyp,sflg,dxi,dyi,dn0,a_scr3,a_scr2,a_km,a_scr7,zm)
 
     !
     ! Diffuse momentum
@@ -265,6 +266,7 @@ contains
     use defs, only          : pi, vonk
 ! Disabling old statisitcs interface (DAN)
 !    use stat, only          : tke_sgs
+    use modstat_slab, only  : stat_slab_sfs ! DAN
     use util, only          : get_avg3, get_cor3, calclevel
     use mpi_interface, only : cyclics, cyclicc
     use grid, only          : liquid
@@ -316,6 +318,9 @@ contains
 
     call cyclics(n1,n2,n3,km,req)
     call cyclicc(n1,n2,n3,km,req)
+
+    ! Sample SFS statistics DAN
+    if (sflg) call stat_slab_sfs(csx, delta, pr, km, kh, ri)
 
 ! Disabling old statisitcs interface (DAN)
 !!$    if (sflg) then

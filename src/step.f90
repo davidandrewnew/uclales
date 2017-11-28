@@ -387,9 +387,12 @@ contains
        xtime = xtime - strtim
        call surface(sst,xtime)
        xtime = xtime + strtim
-       call sample_stat_slab_surface ! DAN
 
-       call diffuse(time)
+       if (sflg) call sample_stat_slab_surface ! DAN
+
+! DAN
+!       call diffuse(time)
+       call diffuse(time, sflg) ! DAN
 
        ! DAN
        if (sflg) then
@@ -470,6 +473,8 @@ contains
 
        ! DAN
        if (sflg) then
+          call stat_slab_misc     
+
           a_scr1(:,:,:) = a_up(:,:,:) + rkalpha(1)*dt*a_ut(:,:,:)
           a_scr2(:,:,:) = a_vp(:,:,:) + rkalpha(1)*dt*a_vt(:,:,:)
           a_scr3(:,:,:) = a_wp(:,:,:) + rkalpha(1)*dt*a_wt(:,:,:)
@@ -478,7 +483,6 @@ contains
           call poisson(a_scr1, a_scr2, a_scr3, a_scr4)
           call stat_slab_pressure(5, a_up, a_vp, a_wp, a_scr4)
 
-          call stat_slab_misc     
           call stat_slab_tendency(5) 
        end if
 
