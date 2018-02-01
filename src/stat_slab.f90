@@ -35,7 +35,7 @@ real, dimension(:,:), pointer :: ut, vt, wt, tt, qt, ut_s, vt_s, wt_s, tt_s, qt_
                                  u2t_press_s, v2t_press_s, w2t_press_s, t2t_press_s, q2t_press_s, uwt_press_s, vwt_press_s, twt_press_s, qwt_press_s, tqt_press_s
 real, dimension(:), pointer :: b1, N2, pi11, wfls1, dthldtls1, dqtdtls1, th1, l1, &
                                e, et_diss, et_shear, e_s, et_diss_s, et_shear_s, &
-                               twt_sfs, twt_sfs_s, qwt_sfs, qwt_sfs_s, &
+                               km, kh, km_s, kh_s, &
                                b1_s, N2_s, pi11_s, wfls1_s, dthldtls1_s, dqtdtls1_s, th1_s, l1_s, &
                                b2, bw, thb, lb, w3, tw2, qw2, bw2, t2w, q2w, b2w, &
                                b2_s, bw_s, thb_s, lb_s, w3_s, tw2_s, qw2_s, bw2_s, t2w_s, q2w_s, b2w_s
@@ -159,8 +159,8 @@ contains
     end if
 
     ! x1_misc
-    nstats_x1_misc = 9
-    if (level >= 1) nstats_x1_misc = nstats_x1_misc + 4
+    nstats_x1_misc = 10
+    if (level >= 1) nstats_x1_misc = nstats_x1_misc + 3
     allocate(x1_misc(nzp,nstats_x1_misc), x1_misc_s(nzp,nstats_x1_misc)) 
     x1_misc(:,:) = 0.
     call create_stat_var(ncid, 'b',         zm_name, my_nf90_real)
@@ -171,12 +171,12 @@ contains
     call create_stat_var(ncid, 'e',         zm_name, my_nf90_real)
     call create_stat_var(ncid, 'et_shear',  zm_name, my_nf90_real)
     call create_stat_var(ncid, 'et_diss',   zm_name, my_nf90_real)
-    call create_stat_var(ncid, 'twt_sfs',   zm_name, my_nf90_real)
+    call create_stat_var(ncid, 'km',        zm_name, my_nf90_real)
+    call create_stat_var(ncid, 'kh',        zm_name, my_nf90_real)
     if (level >= 2) then
        call create_stat_var(ncid, 'dqtdtls',  zt_name, my_nf90_real)
        call create_stat_var(ncid, 'th',       zt_name, my_nf90_real)
        call create_stat_var(ncid, 'l',        zt_name, my_nf90_real)
-       call create_stat_var(ncid, 'qwt_sfs',   zm_name, my_nf90_real)
     end if
 
     ! x2_misc
@@ -354,12 +354,12 @@ contains
     e         => x1_misc(:,6)
     et_shear  => x1_misc(:,7)
     et_diss   => x1_misc(:,8)
-    twt_sfs   => x1_misc(:,9)
+    km        => x1_misc(:,9)
+    kh        => x1_misc(:,10)
     if (level >= 2) then
-       dqtdtls1 => x1_misc(:,10)
-       th1      => x1_misc(:,11)
-       l1       => x1_misc(:,12)
-       qwt_sfs  => x1_misc(:,13) 
+       dqtdtls1 => x1_misc(:,11)
+       th1      => x1_misc(:,12)
+       l1       => x1_misc(:,13)
     end if
 
     ! x1_misc_s
@@ -371,12 +371,12 @@ contains
     e_s         => x1_misc_s(:,6)
     et_shear_s  => x1_misc_s(:,7)
     et_diss_s   => x1_misc_s(:,8)
-    twt_sfs_s   => x1_misc_s(:,9)
+    km_s        => x1_misc_s(:,9)
+    kh_s        => x1_misc_s(:,10)
     if (level >= 2) then
-       dqtdtls1_s => x1_misc_s(:,10)
-       th1_s      => x1_misc_s(:,11)
-       l1_s       => x1_misc_s(:,12) 
-       qwt_sfs_s  => x1_misc_s(:,13) 
+       dqtdtls1_s => x1_misc_s(:,11)
+       th1_s      => x1_misc_s(:,12)
+       l1_s       => x1_misc_s(:,13) 
     end if
 
     ! x2_misc
@@ -660,7 +660,8 @@ contains
           u2t_press_s(k,itype) = u2t_press_s(k,itype) + 2.*(u(k,i,j) - u1_s(k))*(-Dp_u - ut_press_s(k,itype))
           v2t_press_s(k,itype) = v2t_press_s(k,itype) + 2.*(v(k,i,j) - v1_s(k))*(-Dp_v - vt_press_s(k,itype))
           w2t_press_s(k,itype) = w2t_press_s(k,itype) + 2.*(w(k,i,j) - w1_s(k))*(-Dp_w - wt_press_s(k,itype))
-          twt_press_s(k,itype) = twt_press_s(k,itype) + (-Dp_w - wt_press_s(k,itype))*(0.5*(a_tp(k,i,j)+a_tp(kp1,i,j)) - 0.5*(t1_s(k)+t1_s(kp1)))
+          twt_press_s(k,itype) = twt_press_s(k,itype) &
+                               + (-Dp_w - wt_press_s(k,itype))*(0.5*(a_tp(k,i,j)+a_tp(kp1,i,j)) - 0.5*(t1_s(k)+t1_s(kp1)))
           if (level >= 1) then
              qwt_press_s(k,itype) = qwt_press_s(k,itype) + (-Dp_w - wt_press_s(k,itype))*(0.5*(a_rp(k,i,j)+a_rp(kp1,i,j)) - 0.5*(q1_s(k)+q1_s(kp1)))
           end if
@@ -685,20 +686,19 @@ contains
     real, dimension(:,:,:), intent(in) :: km, kh, ri
 
     integer :: i, j, k
-    real :: km_temp, e_temp
+    real :: km_temp
 
     x1_misc_s(:,:) = 0.
     do j = 3,nyp-2
     do i = 3,nxp-2
        do k = 2,nzp-1
           km_temp = km(k,i,j)/(0.5*(dn0(k)+dn0(k+1)))
-          e_temp  = km_temp**2./(delta*pi*(csx**2))**2
 
-          e_s(k)        = e_s(k)        + e_temp
+          e_s(k)        = e_s(k)        + km_temp**2./(delta*pi*(csx**2))**2
           et_shear_s(k) = et_shear_s(k) + km_temp*kh(k,i,j)/(1. - ri(k,i,j)/pr)
           et_diss_s(k)  = et_diss_s(k)  + km_temp*kh(k,i,j)
-          twt_sfs_s(k)  = twt_sfs_s(k)  - (2./3.)*e_temp*(a_tp(k+1,i,j) - a_tp(k,i,j))/(zt(k+1) - zt(k))
-          if (level >= 1) qwt_sfs_s(k)  = qwt_sfs_s(k)  - (2./3.)*e_temp*(a_rp(k+1,i,j) - a_rp(k,i,j))/(zt(k+1) - zt(k))
+          km_s(k)       = km_s(k)       + km_temp
+          kh_s(k)       = kh_s(k)       + km_temp/pr
        end do
     end do
     end do
@@ -785,10 +785,17 @@ contains
                             zm, a_pexnr, zt, a_ut, a_vt, a_wt, a_tt, a_rt, th00, dxi, dyi
     use modutil_mpi, only : par_sum
     use modstat_io, only  : ntypes
+    use mpi_interface, only : myid ! Test
     implicit none
 
     real :: f
     integer :: itype
+
+    ! Test
+    if (myid == 0) then
+       write(*,*) maxloc(abs(u1_s)), maxloc(abs(v1_s))
+       write(*,*) maxval(abs(u1_s)), maxval(abs(v1_s))
+    end if
 
     !
     f = real(n_s_local)/real(n_s_local + n_local)
@@ -1002,12 +1009,12 @@ contains
     call write_stat_var(ncid, 'e',         e,         irec)
     call write_stat_var(ncid, 'et_shear',  et_shear,  irec)
     call write_stat_var(ncid, 'et_diss',   et_diss,   irec)
-    call write_stat_var(ncid, 'twt_sfs',   twt_sfs,   irec)
+    call write_stat_var(ncid, 'km',        km,        irec)
+    call write_stat_var(ncid, 'kh',        kh,        irec)
     if (level >= 2) then
        call write_stat_var(ncid, 'dqtdtls', dqtdtls1, irec)
        call write_stat_var(ncid, 'th',      th1,      irec)
        call write_stat_var(ncid, 'l',       l1,       irec)
-       call write_stat_var(ncid, 'qwt_sfs', qwt_sfs,  irec)
     end if
 
     call write_stat_var(ncid, 'b2',  b2,  irec)

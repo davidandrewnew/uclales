@@ -32,19 +32,21 @@ contains
 ! subroutine poisson: called by timesteping driver to invert the 
 ! poisson equation for pressure and apply the velocity tendencies.
 !
+! DAN
 !  subroutine poisson
-  subroutine poisson(u, v, w, pp, pc)
+  subroutine poisson(dt, u, v, w, pp, pc) ! DAN
 ! DAN
 !    use grid, only : nxp, nyp, nzp, dxi, dyi, dzi_m, dzi_t, dt, a_up, a_ut,      &
 !         a_vp, a_vt, a_wp, a_wt, press, a_pexnr, th00, dn0, wsavex, wsavey
-     use grid, only : nxp, nyp, nzp, dxi, dyi, dzi_m, dzi_t, dt, th00, dn0, wsavex, wsavey
+     use grid, only : nxp, nyp, nzp, dxi, dyi, dzi_m, dzi_t, th00, dn0, wsavex, wsavey
          
 ! Disabling old statisitcs interface (DAN)
 !    use stat, only : fill_scalar, sflg
     use util, only : ae1mm
 
-    real, intent(out), dimension(:,:,:)           :: u, v, w, pp
-    real, intent(out), optional, dimension(:,:,:) :: pc
+    real, intent(in)                              :: dt          ! DAN
+    real, intent(out), dimension(:,:,:)           :: u, v, w, pp ! DAN
+    real, intent(out), optional, dimension(:,:,:) :: pc          ! DAN
 
     complex, allocatable     :: s1(:,:,:)
     real    :: mxdiv, awpbar(nzp)

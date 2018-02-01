@@ -31,11 +31,10 @@ contains
   ! computed... hence the routine is hardwired to a cyclic domain.  
   ! Vertical advection is density weighted consistent with the anelastic
   ! approximation
-!
   subroutine ladvect
-
     use grid, only : a_ut, a_vt, a_wt, a_scr1, a_scr2, a_up,a_vp,a_wp,      &
          nxp, nyp, nzp, dzi_t, dzi_m, dxi, dyi, dn0
+
 ! Disabling old statisitcs interface (DAN)
 !    use stat, only : sflg, updtst, acc_tend
     use util, only : get_avg3
@@ -99,7 +98,7 @@ contains
 !       call get_avg3(nzp,nxp,nyp,a_scr2,v4)
 !       call updtst(nzp,'adv',-2,v4,1)
 !    end if
-    
+
     !
     ! advection of w by (u,v,w) all at current timelevel.  also when flag
     ! is set updated statistical array with uw flux derived from ladvzu

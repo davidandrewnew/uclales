@@ -68,6 +68,29 @@ contains
   end subroutine sample_stat
 
   !
+  ! stat_tendency
+  !
+  subroutine stat_tendency(itype, dt)
+    use grid, only : a_up, a_vp, a_wp, a_ut, a_vt, a_wt, a_scr4, a_scr5, a_scr6, a_scr7, rkalpha, a_pexnr, nzp, nxp, nyp
+    use util, only : velset
+    use prss, only : poisson
+    use modstat_slab, only : stat_slab_pressure, stat_slab_tendency
+
+    integer, intent(in) :: itype
+    real, intent(in)    :: dt
+
+    a_scr4(:,:,:) = a_up(:,:,:) + rkalpha(1)*dt*a_ut(:,:,:)
+    a_scr5(:,:,:) = a_vp(:,:,:) + rkalpha(1)*dt*a_vt(:,:,:)
+    a_scr6(:,:,:) = a_wp(:,:,:) + rkalpha(1)*dt*a_wt(:,:,:)
+    call velset(nzp, nxp, nyp, a_scr4, a_scr5, a_scr6)
+    a_scr7(:,:,:) = a_pexnr(:,:,:)
+    call poisson(dt, a_scr4, a_scr5, a_scr6, a_scr7)
+
+    call stat_slab_pressure(itype, a_up, a_vp, a_wp, a_scr7)
+    call stat_slab_tendency(itype)
+  end subroutine stat_tendency
+
+  !
   ! update_stat
   !
   subroutine update_stat

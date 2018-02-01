@@ -64,19 +64,24 @@ contains
   !
 ! DAN
 !  subroutine diffuse(timein)
-  subroutine diffuse(timein, sflg) ! DAN
+  subroutine diffuse(timein, dt, sflg) ! DAN
 
     use grid, only : newvar, nstep, a_up, a_ut, a_vp, a_vt, a_wp, a_wt       &
          ,a_rp, a_tp, a_sp, a_st, vapor, a_pexnr, a_theta,a_km               &
          , a_scr1, a_scr2, a_scr3, a_scr4, a_scr5, a_scr6, a_scr7, nscl, nxp, nyp    &
-         , nzp, nxyp, nxyzp, zm, dxi, dyi, dzi_t, dzi_m, dt, th00, dn0           &
+! DAN
+!         , nzp, nxyp, nxyzp, zm, dxi, dyi, dzi_t, dzi_m, dt, th00, dn0           &
+         , nzp, nxyp, nxyzp, zm, dxi, dyi, dzi_t, dzi_m, th00, dn0           &
          , pi0, pi1, level, uw_sfc, vw_sfc, ww_sfc, wt_sfc, wq_sfc,liquid, a_cvrxp, trac_sfc
 
     use util, only         : atob, azero, get_avg3
     use mpi_interface, only: cyclics, cyclicc
     use thrm, only         : bruvais, fll_tkrs
+    use modstat, only      : stat_tendency ! DAN
 
-    real, intent(in)       :: timein 
+! DAN
+!    real, intent(in)       :: timein 
+    real, intent(in)       :: timein, dt ! DAN
     logical, intent(in)    :: sflg ! DAN
     integer :: n
 
@@ -136,6 +141,8 @@ contains
     call cyclics(nzp,nxp,nyp,a_ut,req)
     call cyclicc(nzp,nxp,nyp,a_ut,req)
 
+    if (sflg) call stat_tendency(1, dt) ! DAN
+
 ! DAN
 !    if (sflg) then
 !       call sgs_vel(nzp,nxp,nyp,sz1,sz2,sz3)
@@ -176,6 +183,8 @@ contains
        call cyclics(nzp,nxp,nyp,a_st,req)
        call cyclicc(nzp,nxp,nyp,a_st,req)
     enddo
+
+    if (sflg) call stat_tendency(2, dt) ! DAN
 
   end subroutine diffuse
   !

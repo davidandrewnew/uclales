@@ -20,7 +20,7 @@
 module modstat_io
   implicit none
 
-  integer, parameter :: ntypes = 6
+  integer, parameter :: ntypes = 8
 
   character(*), parameter :: time_name = 'time'
   character(*), parameter :: rank_name = 'rank'

@@ -333,8 +333,8 @@ contains
     use grid, only : a_pexnr, press, a_scr1, a_scr2, a_scr3, a_scr4, rkalpha ! DAN
 ! Disable old statistic interace (DAN)
 !    use stat, only : sflg, statistics
-    use modstat, only : sample_stat, update_stat ! DAN
-    use modstat_slab, only : stat_slab_tendency, stat_slab_misc, stat_slab_pressure, sample_stat_slab_surface ! DAN
+    use modstat, only : sample_stat, update_stat, stat_tendency ! DAN
+    use modstat_slab, only : sample_stat_slab_surface, stat_slab_misc ! DAN
     use sgsm, only : diffuse
     !use sgsm_dyn, only : calc_cs
     use srfc, only : surface
@@ -387,25 +387,11 @@ contains
        xtime = xtime - strtim
        call surface(sst,xtime)
        xtime = xtime + strtim
-
        if (sflg) call sample_stat_slab_surface ! DAN
 
 ! DAN
 !       call diffuse(time)
-       call diffuse(time, sflg) ! DAN
-
-       ! DAN
-       if (sflg) then
-          a_scr1(:,:,:) = a_up(:,:,:) + rkalpha(1)*dt*a_ut(:,:,:)
-          a_scr2(:,:,:) = a_vp(:,:,:) + rkalpha(1)*dt*a_vt(:,:,:)
-          a_scr3(:,:,:) = a_wp(:,:,:) + rkalpha(1)*dt*a_wt(:,:,:)
-          call velset(nzp, nxp, nyp, a_scr1, a_scr2, a_scr3)
-          a_scr4(:,:,:) = a_pexnr(:,:,:)
-          call poisson(a_scr1, a_scr2, a_scr3, a_scr4)
-          call stat_slab_pressure(1, a_up, a_vp, a_wp, a_scr4)
-
-          call stat_slab_tendency(1) 
-       end if
+       call diffuse(time, dt, sflg) ! DAN
 
        if (adv=='monotone') then
           call fadvect
@@ -415,21 +401,10 @@ contains
           print *, 'wrong specification for advection scheme'
           call appl_abort(0)
        endif
+       if (sflg) call stat_tendency(3, dt) ! DAN
 
        call ladvect
-
-       ! DAN
-       if (sflg) then
-          a_scr1(:,:,:) = a_up(:,:,:) + rkalpha(1)*dt*a_ut(:,:,:)
-          a_scr2(:,:,:) = a_vp(:,:,:) + rkalpha(1)*dt*a_vt(:,:,:)
-          a_scr3(:,:,:) = a_wp(:,:,:) + rkalpha(1)*dt*a_wt(:,:,:)
-          call velset(nzp, nxp, nyp, a_scr1, a_scr2, a_scr3)
-          a_scr4(:,:,:) = a_pexnr(:,:,:)
-          call poisson(a_scr1, a_scr2, a_scr3, a_scr4)
-          call stat_slab_pressure(2, a_up, a_vp, a_wp, a_scr4)
-
-          call stat_slab_tendency(2) 
-       end if
+       if (sflg) call stat_tendency(4, dt) ! DAN
 
        if (level >= 1) then
           if (lwaterbudget) then
@@ -440,76 +415,28 @@ contains
           call forcings(xtime,cntlat,sst,div,case_name,time)
           call micro(level,istp)
        end if
-
-       ! DAN
-       if (sflg) then
-          a_scr1(:,:,:) = a_up(:,:,:) + rkalpha(1)*dt*a_ut(:,:,:)
-          a_scr2(:,:,:) = a_vp(:,:,:) + rkalpha(1)*dt*a_vt(:,:,:)
-          a_scr3(:,:,:) = a_wp(:,:,:) + rkalpha(1)*dt*a_wt(:,:,:)
-          call velset(nzp, nxp, nyp, a_scr1, a_scr2, a_scr3)
-          a_scr4(:,:,:) = a_pexnr(:,:,:)
-          call poisson(a_scr1, a_scr2, a_scr3, a_scr4)
-          call stat_slab_pressure(3, a_up, a_vp, a_wp, a_scr4)
-
-          call stat_slab_tendency(3) 
-       end if
+       if (sflg) call stat_tendency(5, dt) ! DAN
 
        call corlos
-
-       ! DAN
-       if (sflg) then
-          a_scr1(:,:,:) = a_up(:,:,:) + rkalpha(1)*dt*a_ut(:,:,:)
-          a_scr2(:,:,:) = a_vp(:,:,:) + rkalpha(1)*dt*a_vt(:,:,:)
-          a_scr3(:,:,:) = a_wp(:,:,:) + rkalpha(1)*dt*a_wt(:,:,:)
-          call velset(nzp, nxp, nyp, a_scr1, a_scr2, a_scr3)
-          a_scr4(:,:,:) = a_pexnr(:,:,:)
-          call poisson(a_scr1, a_scr2, a_scr3, a_scr4)
-          call stat_slab_pressure(4, a_up, a_vp, a_wp, a_scr4)
-
-          call stat_slab_tendency(4) 
-       end if
+       if (sflg) call stat_tendency(6, dt) ! DAN
 
        call buoyancy
-
-       ! DAN
        if (sflg) then
-          call stat_slab_misc     
-
-          a_scr1(:,:,:) = a_up(:,:,:) + rkalpha(1)*dt*a_ut(:,:,:)
-          a_scr2(:,:,:) = a_vp(:,:,:) + rkalpha(1)*dt*a_vt(:,:,:)
-          a_scr3(:,:,:) = a_wp(:,:,:) + rkalpha(1)*dt*a_wt(:,:,:)
-          call velset(nzp, nxp, nyp, a_scr1, a_scr2, a_scr3)
-          a_scr4(:,:,:) = a_pexnr(:,:,:)
-          call poisson(a_scr1, a_scr2, a_scr3, a_scr4)
-          call stat_slab_pressure(5, a_up, a_vp, a_wp, a_scr4)
-
-          call stat_slab_tendency(5) 
+          call stat_slab_misc
+          call stat_tendency(7, dt) ! DAN
        end if
 
        call sponge
        call decay
+       if (sflg) call stat_tendency(8, dt) ! DAN
 
-       ! DAN
-       if (sflg) then
-          a_scr1(:,:,:) = a_up(:,:,:)
-          a_scr2(:,:,:) = a_vp(:,:,:)
-          a_scr3(:,:,:) = a_wp(:,:,:)
-
-          call stat_slab_tendency(6)        
-       end if
-       
        call update (nstep)
 ! DAN
 !       call poisson
-       call poisson(a_up, a_vp, a_wp, a_pexnr, press) ! DAN
+       call poisson(dt, a_up, a_vp, a_wp, a_pexnr, press) ! DAN
        call velset(nzp,nxp,nyp,a_up,a_vp,a_wp)
 
-       ! DAN
-       if (sflg) then
-          call stat_slab_pressure(6, a_scr1, a_scr2, a_scr3, a_pexnr)
-          call update_stat
-       end if
-
+       if (sflg) call update_stat ! DAN
     end do
 
     if(lpartic .and. lpartdrop) call deactivate_drops(time+dt)
