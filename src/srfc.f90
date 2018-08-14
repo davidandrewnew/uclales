@@ -201,7 +201,9 @@ contains
        do j=3,nyp-2
          do i=3,nxp-2
            bfl(1) = bfl(1)+a_theta(2,i,j)
-           bfl(2) = bfl(2)+vapor(2,i,j)
+! DAN
+!           bfl(2) = bfl(2)+vapor(2,i,j)
+           if (level > 0) bfl(2) = bfl(2) + vapor(2,i,j) ! DAN
          end do
        end do
 
@@ -214,14 +216,22 @@ contains
 ! DAN
 !         bflx  = ((sst -bfg(1)) + bfg(1)*ep2*(rslf(psrf,sst) -bfg(2))) &
 !               * 0.5*(dn0(1)+dn0(2))*cp*Vbulk
-         bflx  = ((sst/exner -bfg(1)) + bfg(1)*ep2*(rslf(psrf,sst) -bfg(2))) & ! DAN
-               * 0.5*(dn0(1)+dn0(2))*cp*Vbulk                                  ! DAN
+         if (level > 0) then ! DAN
+            bflx = ((sst/exner - bfg(1)) + bfg(1)*ep2*(rslf(psrf,sst) - bfg(2))) & 
+                   * 0.5*(dn0(1)+dn0(2))*cp*Vbulk                                  
+         else
+            bflx = (sst/exner - bfg(1)) * 0.5*(dn0(1)+dn0(2))*cp*Vbulk
+         end if
          sst1 = sst + 0.1
 ! DAN
 !         bflx1 = ((sst1-bfg(1)) + bfg(1)*ep2*(rslf(psrf,sst1)-bfg(2))) &
 !               * 0.5*(dn0(1)+dn0(2))*cp*Vbulk
-         bflx1 = ((sst1/exner-bfg(1)) + bfg(1)*ep2*(rslf(psrf,sst1)-bfg(2))) & ! DAN
-               * 0.5*(dn0(1)+dn0(2))*cp*Vbulk                                  ! DAN
+         if (level > 0) then ! DAN
+            bflx1 = ((sst1/exner - bfg(1)) + bfg(1)*ep2*(rslf(psrf,sst1) - bfg(2))) & 
+                    * 0.5*(dn0(1)+dn0(2))*cp*Vbulk                                  
+         else
+            bflx1 = (sst1/exner - bfg(1)) * 0.5*(dn0(1)+dn0(2))*cp*Vbulk
+         end if
          sst  = sst + 0.1* (dthcon - bflx) / (bflx1-bflx)
        end do
 
@@ -229,18 +239,27 @@ contains
          do i=3,nxp-2
 ! DAN
 !           wt_sfc(i,j) = Vbulk * (sst -a_theta(2,i,j))
-           wt_sfc(i,j) = Vbulk * (sst/exner -a_theta(2,i,j)) ! DAN
-           wq_sfc(i,j) = Vbulk * (rslf(psrf,sst) - vapor(2,i,j))
+!           wq_sfc(i,j) = Vbulk * (rslf(psrf,sst) - vapor(2,i,j))
+           wt_sfc(i,j) = Vbulk * (sst/exner - a_theta(2,i,j))                   ! DAN
+           if (level > 0) wq_sfc(i,j) = Vbulk * (rslf(psrf,sst) - vapor(2,i,j)) ! DAN
            wspd(i,j)    = max(0.1,                                    &
                           sqrt((a_up(2,i,j)+umean)**2+(a_vp(2,i,j)+vmean)**2))
-           bflx         = wt_sfc(i,j)*g/bfg(1) + g*ep2*wq_sfc(i,j)
+! DAN
+!           bflx         = wt_sfc(i,j)*g/bfg(1) + g*ep2*wq_sfc(i,j)
+           if (level > 0) then ! DAN
+              bflx = wt_sfc(i,j)*g/bfg(1) + g*ep2*wq_sfc(i,j)
+           else
+              bflx = wt_sfc(i,j)*g/th00
+           end if
            a_ustar(i,j) = diag_ustar(zt(2),zrough,bflx,wspd(i,j))
            uw_sfc(i,j)  = -a_ustar(i,j)*a_ustar(i,j)                  &
                 *(a_up(2,i,j)+umean)/wspd(i,j)
            vw_sfc(i,j)  = -a_ustar(i,j)*a_ustar(i,j)                  &
                 *(a_vp(2,i,j)+vmean)/wspd(i,j)
            ww_sfc(i,j)  = 0.
-           a_rstar(i,j) = wq_sfc(i,j)/a_ustar(i,j)
+! DAN
+!           a_rstar(i,j) = wq_sfc(i,j)/a_ustar(i,j)
+           if (level > 0) a_rstar(i,j) = wq_sfc(i,j)/a_ustar(i,j) ! DAN
            a_tstar(i,j) = wt_sfc(i,j)/a_ustar(i,j)
           end do
        end do  

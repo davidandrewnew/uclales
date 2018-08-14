@@ -387,7 +387,7 @@ contains
        xtime = xtime - strtim
        call surface(sst,xtime)
        xtime = xtime + strtim
-       if (sflg) call sample_stat_slab_surface ! DAN
+       if (sflg) call sample_stat_slab_surface(sst) ! DAN
 
 ! DAN
 !       call diffuse(time)

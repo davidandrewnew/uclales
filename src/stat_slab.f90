@@ -39,7 +39,7 @@ real, dimension(:), pointer :: b1, N2, pi11, wfls1, dthldtls1, dqtdtls1, th1, l1
                                b1_s, N2_s, pi11_s, wfls1_s, dthldtls1_s, dqtdtls1_s, th1_s, l1_s, &
                                b2, bw, thb, lb, w3, tw2, qw2, bw2, t2w, q2w, b2w, &
                                b2_s, bw_s, thb_s, lb_s, w3_s, tw2_s, qw2_s, bw2_s, t2w_s, q2w_s, b2w_s
-real, pointer :: uw_surf1, vw_surf1, tw_surf1, qw_surf1, uw_surf1_s, vw_surf1_s, tw_surf1_s, qw_surf1_s
+real, pointer :: uw_surf1, vw_surf1, tw_surf1, qw_surf1, t_surf1, q_surf1, uw_surf1_s, vw_surf1_s, tw_surf1_s, qw_surf1_s, t_surf1_s, q_surf1_s
 
 real, dimension(:), allocatable, target     :: x_surf, x_surf_s
 real, dimension(:,:), allocatable, target   :: x1, x2, x1_misc, x2_misc, x1_s, x2_s, x1_misc_s, x2_misc_s
@@ -51,7 +51,7 @@ contains
   ! init_stat_slab
   !
   subroutine init_stat_slab
-    use grid, only             : filprf, level, nzp, nxp, nyp
+    use grid, only             : filprf, level, nzp, nxp, nyp, isfctyp
     use modstat_io, only       : create_stat_file, create_stat_var, create_stat_var_2d, zt_name, zm_name, ntypes
     use netcdf_interface, only : my_nf90_real, my_nf90_int, create_var
     use modutil_mpi, only      : par_sum
@@ -72,12 +72,20 @@ contains
     ! x_surf
     nstats_x_surf = 3
     if (level >= 1) nstats_x_surf = nstats_x_surf + 1
+    if (isfctyp == 2 .or. isfctyp == 4) then
+       nstats_x_surf = nstats_x_surf + 1
+       if (level >= 1) nstats_x_surf = nstats_x_surf + 1
+    end if
     allocate(x_surf(nstats_x_surf), x_surf_s(nstats_x_surf))
     x_surf(:) = 0.
     call create_stat_var(ncid, 'uw_surf', my_nf90_real)
     call create_stat_var(ncid, 'vw_surf', my_nf90_real)
     call create_stat_var(ncid, 'tw_surf', my_nf90_real)
     if (level >= 1) call create_stat_var(ncid, 'qw_surf', my_nf90_real)
+    if (isfctyp == 2 .or. isfctyp == 4) then
+       call create_stat_var(ncid, 't_surf', my_nf90_real)
+       if (level >= 1) call create_stat_var(ncid, 'q_surf', my_nf90_real)
+    end if
 
     ! x1
     nstats_x1 = 4
@@ -212,12 +220,20 @@ contains
     vw_surf1 => x_surf(2)
     tw_surf1 => x_surf(3)
     if (level >= 1) qw_surf1 => x_surf(4)
+    if (isfctyp == 2 .or. isfctyp == 4) then
+       t_surf1 => x_surf(5)
+       if (level >= 1) q_surf1 => x_surf(6)
+    end if
 
     ! x_surf_s
     uw_surf1_s => x_surf_s(1)
     vw_surf1_s => x_surf_s(2)
     tw_surf1_s => x_surf_s(3)
     if (level >= 1) qw_surf1_s => x_surf_s(4)
+    if (isfctyp == 2 .or. isfctyp == 4) then
+       t_surf1_s => x_surf_s(5)
+       if (level >= 1) q_surf1_s => x_surf_s(6)
+    end if
 
     ! x1
     u1 => x1(:,1)
@@ -418,29 +434,38 @@ contains
   !
   ! sample_stat_slab_surface
   !
-  subroutine sample_stat_slab_surface
+  subroutine sample_stat_slab_surface(sst)
     use grid, only        : a_up, a_vp, a_wp, a_tp, a_rp, liquid, nzp, nyp, nxp, level, a_theta, vapor, &
                             zm, a_pexnr, zt, a_ut, a_vt, a_wt, a_tt, a_rt, th00, dxi, dyi, &
-                            uw_sfc, vw_sfc, wt_sfc, wq_sfc
+                            uw_sfc, vw_sfc, wt_sfc, wq_sfc, psrf, isfctyp
     use modutil_mpi, only : par_sum
+    use thrm, only        : rslf 
+    use defs, only        : p00, rcp
     implicit none
+
+    real, intent(in) :: sst
 
     real, allocatable, dimension(:), target :: x_surf_scratch
     integer :: i, j
 
-    ! Sample first-order statistics
+    ! Sample surface fluxes
     x_surf_s(:) = 0.
     do j = 3,nyp-2
     do i = 3,nxp-2
        uw_surf1_s = uw_surf1_s + uw_sfc(i,j)
        vw_surf1_s = vw_surf1_s + vw_sfc(i,j)
        tw_surf1_s = tw_surf1_s + wt_sfc(i,j)
-       if (level >= 1) qw_surf1_s = qw_surf1_s + wq_sfc(i,j)
     end do
     end do
     allocate(x_surf_scratch(nstats_x_surf))
     call par_sum(x_surf_s, x_surf_scratch, nstats_x_surf)
     x_surf_s(:) = x_surf_scratch(:)/real(n_s_global)
+
+    ! Sample first-order statistics at the surface
+    if (isfctyp == 2 .or. isfctyp == 4) then
+       t_surf1_s = sst/(psrf/p00)**rcp
+       if (level >= 1) q_surf1_s = rslf(psrf, sst)
+    end if
 
   end subroutine sample_stat_slab_surface
 
@@ -782,20 +807,13 @@ contains
   !
   subroutine update_stat_slab
     use grid, only        : a_up, a_vp, a_wp, a_tp, a_rp, liquid, nzp, nyp, nxp, level, a_theta, vapor, &
-                            zm, a_pexnr, zt, a_ut, a_vt, a_wt, a_tt, a_rt, th00, dxi, dyi
+                            zm, a_pexnr, zt, a_ut, a_vt, a_wt, a_tt, a_rt, th00, dxi, dyi, isfctyp
     use modutil_mpi, only : par_sum
     use modstat_io, only  : ntypes
-    use mpi_interface, only : myid ! Test
     implicit none
 
     real :: f
     integer :: itype
-
-    ! Test
-    if (myid == 0) then
-       write(*,*) maxloc(abs(u1_s)), maxloc(abs(v1_s))
-       write(*,*) maxval(abs(u1_s)), maxval(abs(v1_s))
-    end if
 
     !
     f = real(n_s_local)/real(n_s_local + n_local)
@@ -905,7 +923,8 @@ contains
   !
   subroutine write_stat_slab(time, fsttm, nsmp)
     use modstat_io, only : write_stat_var, advance_stat_time, ntypes
-    use grid, only       : level, umean, vmean, th00, nzp
+    use grid, only       : level, umean, vmean, th00, nzp, isfctyp
+    use mpi_interface, only : myid
     implicit none
 
     real, intent(in)     :: time, fsttm
@@ -963,6 +982,12 @@ contains
     call write_stat_var(ncid, 'vw_surf', vw_surf1, irec)
     call write_stat_var(ncid, 'tw_surf', tw_surf1, irec)
     if (level >= 1) call write_stat_var(ncid, 'qw_surf', qw_surf1, irec)
+    if (isfctyp == 2 .or. isfctyp == 4) then
+       call write_stat_var(ncid, 't_surf', t_surf1, irec)
+       if (level >= 1) call write_stat_var(ncid, 'q_surf', q_surf1, irec)
+    end if
+
+    write(*,*) time, myid, t_surf1
 
     call write_stat_var(ncid, 'u2', u2, irec)
     call write_stat_var(ncid, 'v2', v2, irec)
