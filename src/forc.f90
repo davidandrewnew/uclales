@@ -42,6 +42,10 @@ module forc
   !cgils
   logical :: lstendflg=.false.
 
+  real, allocatable, dimension(:) :: l1, l1_scratch, lwp_eucrem, F_eucrem ! DAN
+  real, parameter :: F_top_eucrem = 74  ! DAN
+  real, parameter :: a_eucrem     = 130 ! DAN
+
 contains
   !
   ! -------------------------------------------------------------------
@@ -244,7 +248,9 @@ contains
 
     use mpi_interface, only : pecount, double_scalar_par_sum,myid, appl_abort
     use stat, only : get_zi
-    use grid, only : th0, rt0, th00, wfls, dthldtls, dqtdtls, dn0
+    use grid, only : th0, rt0, th00, wfls, dthldtls, dqtdtls, dn0, &
+                     nxp, nzp, nyp, liquid, zm, a_tt! DAN
+    use modutil_mpi, only : par_sum
 
     integer, intent (in):: n1,n2, n3
     real, dimension (n1), intent (in)          :: zt, dzi_t, dzi_m
@@ -415,10 +421,68 @@ contains
                 ! moisture advection
                 !
                 rtt(k,i,j) = rtt(k,i,j) - ( rt(kp1,i,j) - rt(k,i,j) )*sf(k)
-                if (zt(k) < zibar) rtt(k,i,j) = rtt(k,i,j)  - 1.5e-8
+                if (zt(k) < zibar) rtt(k,i,j) = rtt(k,i,j)  
              enddo
           enddo
        enddo
+    ! DAN (start)
+    case ('du99')
+       ! Initialize
+       l1(:)         = 0.
+       l1_scratch(:) = 0.
+       lwp_eucrem(:) = 0.
+       F_eucrem(:)   = 0.
+
+       do j = 3,nyp-2
+       do i = 3,nxp-2
+          do k = 2,nzp-1
+             l1(k) = l1(k) + liquid(k,i,j)
+          end do
+       end do
+       end do
+
+       call par_sum(l1, l1_scratch, nzp)
+       l1(:) = l1_scratch(:)/real((nxp-4)*(nyp-4))
+
+       ! Compute mean liquid water profile
+       F_eucrem(nzp-1:nzp) = F_top_eucrem
+       do k = nzp-1,2,-1
+          ! Compute liquid water path
+          if (l1(k) > 0) then
+             lwp_eucrem(k) = lwp_eucrem(k+1) + (zm(k) - zm(k-1))*dn0(k)*l1(k)
+          else
+             lwp_eucrem(k) = lwp_eucrem(k+1)
+          end if
+
+          ! Compute radiative flux
+          F_eucrem(k-1) = F_top_eucrem*exp(-a_eucrem*lwp_eucrem(k))
+       end do
+
+       ! Compute subsidence factor
+       do k=2,n1-1
+          sf(k) = min(0., -1.5E-5*zt(k)*dzi_t(k))
+       end do
+
+       ! Compute forcing tendencies
+       do j=3,n3-2
+       do i=3,n2-2
+          do k=2,n1-1
+             kp1 = k+1
+
+             ! Subsidence
+             tt(k,i,j)  = tt(k,i,j)  - ( tl(kp1,i,j) - tl(k,i,j) )*sf(k)
+             rtt(k,i,j) = rtt(k,i,j) - ( rt(kp1,i,j) - rt(k,i,j) )*sf(k)
+
+             ! Radiation
+             tt(k,i,j) = tt(k,i,j) - (F_eucrem(k) - F_eucrem(k-1))/(cp*dn0(k)*(zm(k) - zm(k-1)))
+          end do
+          
+          ! Subsidence
+          tt(n1,i,j)  =  tt(n1,i,j) +   6E-3*1.5E-5*zt(n1)
+          rtt(n1,i,j) = rtt(n1,i,j) - 2.4E-6*1.5E-5*zt(n1)
+       enddo
+    enddo
+    ! DAN (end) 
     case default
        if (myid == 0) print *, '  ABORTING: inproper call to radiation'
        call appl_abort(0)

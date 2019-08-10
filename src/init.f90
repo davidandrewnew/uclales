@@ -64,8 +64,11 @@ contains
     use modparticles, only: init_particles, lpartic, lpartdump, lpartstat, initparticledump, initparticlestat, write_particle_hist, particlestat
     use netcdf_interface, only : init_netcdf_interface      ! DAN
     use modstat, only          : init_stat                  ! DAN
-    use srfc, only             : dthcon, drtcon, sflux_type ! DAN
+    use srfc, only             : dthcon, drtcon, sflux_type, scooling, sst0 ! DAN
     use defs, only             : cp, alvl                   ! DAN
+    use step, only             : sst, case_name ! DAN
+    use forc, only             : l1, l1_scratch, lwp_eucrem, F_eucrem ! DAN
+    use grid, only             : iradtyp
 
     implicit none
 
@@ -106,6 +109,11 @@ contains
           dthcon = dthcon*0.5*(dn0(1)+dn0(2))*cp
           drtcon = drtcon*0.5*(dn0(1)+dn0(2))*alvl
        end if
+
+       ! Set initial surface temperature
+       if (scooling /= 0) then
+          sst0 = sst
+       end if
     else if (runtype == 'HISTORY') then
        call hstart
        if (lhomrestart) then
@@ -129,6 +137,15 @@ contains
     !cgils
      if (lstendflg) then
        call lstend_init
+     end if
+
+     ! DAN
+     if (iradtyp == 1 .and. case_name == 'du99') then
+        allocate(l1(nzp), l1_scratch(nzp), lwp_eucrem(nzp), F_eucrem(nzp))
+        l1(:)         = 0.
+        l1_scratch(:) = 0.
+        lwp_eucrem(:) = 0.
+        F_eucrem(:)   = 0.
      end if
 
      ! Initialize NetCDF interface (DAN)

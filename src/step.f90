@@ -117,7 +117,8 @@ contains
        if(myid .eq. 0 .and. statflg) print*,'     sampling stat at t=',time ! DAN
 
        call t_step
-       time = time + dt
+! DAN
+!       time = time + dt
 
 ! DAN
 !!$       call cfl(cflmax)
@@ -143,6 +144,8 @@ contains
 ! DAN
 !         if (lpartic .and. lpartstat) call particlestat(.true.,time)
        end if
+
+       time = time + dt ! DAN
 
        if (hisflg) then
          if(myid==0) print*,'     history at time=',time
@@ -294,7 +297,8 @@ contains
     if(mod(itime,issam_intvl) .eq. 0) then ! DAN
       statflg    = .true.
     end if
-    if(mod(itime+idt,isavg_intvl) .eq. 0) then
+!    if(mod(itime+idt,isavg_intvl) .eq. 0) then
+    if(mod(itime,isavg_intvl) .eq. 0 .and. itime .ne. 0) then
 ! DAN
 !      statflg    = .true.
       savgflg    = .true.
@@ -873,7 +877,7 @@ contains
                   a_ut(k,i,j)=a_ut(k,i,j)-spngt(kk)*(a_up(k,i,j)-ubarg(kk))
                   a_vt(k,i,j)=a_vt(k,i,j)-spngt(kk)*(a_vp(k,i,j)-vbarg(kk))
                   a_wt(k,i,j)=a_wt(k,i,j)-spngm(kk)*(a_wp(k,i,j))
-                  if (level >= 1) a_rt(k,i,j) = a_rt(k,i,j) - spngt(kk)*(a_rp(k,i,j) - rt0(k)) ! Damp humidity also (DAN)
+                  if (level >= 1) a_rt(k,i,j) = a_rt(k,i,j) - spngt(kk)*(a_rp(k,i,j) - rbarg(kk)) ! Damp humidity also (DAN)
                end do
             end do
          end do

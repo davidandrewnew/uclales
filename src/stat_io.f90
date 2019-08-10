@@ -51,6 +51,7 @@ contains
     use mpi_interface, only    : pecount 
     use grid, only             : zt, zm, dn0, dthldtls, dqtdtls, level, wfls, pi0, u0, v0, nzp
     use defs, only             : cp, R, alvl
+    use step, only             : cntlat
     implicit none
 
     character(*), intent(in) :: name
@@ -59,7 +60,7 @@ contains
     integer              :: i
     integer, allocatable :: rank_values(:), type_values(:)
     real, allocatable    :: pi0_by_cp(:)
-    real                 :: cp_copy, alvl_copy, R_copy
+    real                 :: cp_copy, alvl_copy, R_copy, cntlat_copy
 
     ! Create file
     call create_file(name, ncid)
@@ -91,9 +92,10 @@ contains
     call create_var(ncid=ncid, var_name='cp',   type=my_nf90_real)
     call create_var(ncid=ncid, var_name='alvl', type=my_nf90_real)
     call create_var(ncid=ncid, var_name='R',    type=my_nf90_real)
+    call create_var(ncid=ncid, var_name='cntlat', type=my_nf90_real)
 
-    call create_var(ncid, 'dn0', my_nf90_real, (/zt_name/))
-    call create_var(ncid, 'pi0', my_nf90_real, (/zt_name/))
+    call create_var(ncid, 'dn0',    my_nf90_real, (/zt_name/))
+    call create_var(ncid, 'pi0',    my_nf90_real, (/zt_name/))
 
     ! Create variable for first and last sample times
     call create_var(ncid, 'nsmp',  my_nf90_int, (/time_name/))
@@ -101,9 +103,10 @@ contains
     call create_var(ncid, 'lsttm', my_nf90_real, (/time_name/))
 
     ! Needed for intent(inout) with parameter
-    cp_copy   = cp
-    alvl_copy = alvl
-    R_copy    = R
+    cp_copy     = cp
+    alvl_copy   = alvl
+    R_copy      = R
+    cntlat_copy = cntlat
     allocate(pi0_by_cp(nzp))
     pi0_by_cp(:) = pi0(:)/cp
 
@@ -111,6 +114,7 @@ contains
     call write_var(ncid, 'cp',   cp_copy)
     call write_var(ncid, 'alvl', alvl_copy)
     call write_var(ncid, 'R',    R_copy)
+    call write_var(ncid, 'cntlat', cntlat)
 
     call write_var(ncid, 'dn0', dn0)
     call write_var(ncid, 'pi0', pi0_by_cp)
@@ -190,7 +194,7 @@ contains
     integer, intent(in)  :: nsmp, ncid
     integer, intent(out) :: irec
 
-    real    :: time_copy, fsttm_copy
+    real    :: time_copy, fsttm_copy, stat_time
     integer :: nsmp_copy
 
     ! Because Parallel NetCDF does not allow intent(in) variables
@@ -198,11 +202,14 @@ contains
     nsmp_copy  = nsmp
     fsttm_copy = fsttm
 
+    !
+    stat_time = 0.5*(fsttm + time)
+
     ! Increment record counter
     irec = irec + 1
 
     ! Write to disk
-    call write_var(ncid, time_name, time_copy, irec)
+    call write_var(ncid, time_name, stat_time, irec)
     call write_var(ncid, 'nsmp',  nsmp_copy,   irec)
     call write_var(ncid, 'fsttm', fsttm_copy,  irec)
     call write_var(ncid, 'lsttm', time_copy,   irec)

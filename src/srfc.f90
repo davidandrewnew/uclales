@@ -30,7 +30,9 @@ use lsmdata
   real    :: rh_srf = 1.
   real    :: drag   = -1.
 
-  integer :: sflux_type = 0 ! Surface flux type (0->energetic, 1->kinematic)
+  integer :: sflux_type = 0 ! Surface flux type (0->energetic, 1->kinematic) (DAN)
+  real    :: scooling = 0   ! Surface cooling rate (Kh-1) (DAN)
+  real    :: sst0           ! Initial surface temperature for surface cooling (DAN)
 
 contains
   !
@@ -104,6 +106,12 @@ contains
     ! gradients. Then use similarity theory to predict the fluxes. 
     !
     case(2)
+
+       ! DAN
+       if (scooling /= 0) then
+          sst = sst0 - (time_in*24.)*scooling
+          if (myid == 0) write(*,*) sst, sst*(p00/psrf)**rcp
+       end if
 
        call get_swnds(nzp,nxp,nyp,usfc,vsfc,wspd,a_up,a_vp,umean,vmean)
        usum = 0.

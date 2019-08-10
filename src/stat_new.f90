@@ -14,7 +14,7 @@
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 !
-! Copyright 2015-2016, David A. New
+! Copyright 2015-2018, David A. New
 !----------------------------------------------------------------------------
 
 module modstat
@@ -62,9 +62,6 @@ contains
     ! Grid statistics
     call sample_stat_slab
 
-    ! Increment sample count
-    nsmp = nsmp + 1
-
   end subroutine sample_stat
 
   !
@@ -100,6 +97,9 @@ contains
     ! Grid statistics
     call update_stat_slab
 
+    ! Increment sample count
+    nsmp = nsmp + 1
+
   end subroutine update_stat
 
   !
@@ -110,20 +110,18 @@ contains
     use modstat_slab, only  : write_stat_slab
     implicit none
 
-    real, intent(in)    :: time 
+    real, intent(in) :: time 
 
-    if (nsmp .ne. 0) then
-       ! Grid statistics
-       call write_stat_slab(time, fsttm, nsmp)
+    ! Grid statistics
+    call write_stat_slab(time, fsttm, nsmp)
        
-       ! Reset sample count
-       fsttm = time
-       nsmp  = 0
-    else
-       write(*,*) 'Error: attempting to write statistics with zero samples'
-       call appl_abort(0)
-    end if
+    ! Reset sample count
+    fsttm = time
+    nsmp  = 0
 
+    ! Re-use last sample for last average as first sample for next average
+    call update_stat
+ 
   end subroutine write_stat
 
   !

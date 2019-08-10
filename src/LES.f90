@@ -103,7 +103,7 @@ contains
     use mcrp, only : microseq,lrandommicro,timenuc,nin_set,cloud_type, lpartdrop
     use modparticles, only : lpartic, lpartsgs, lrandsurf, lpartstat, lpartdump, &
          lpartdumpui, lpartdumpth, lpartdumpmr, frqpartdump, ldropstart
-    use srfc, only : sflux_type ! DAN
+    use srfc, only : sflux_type, scooling ! DAN
 
     implicit none
 
@@ -129,7 +129,7 @@ contains
                   iradtyp, radfrq , strtim , sfc_albedo, & ! radiation type flag
          isfctyp, ubmin  , zrough ,          & ! surface parameterization type
          sst    , dthcon , drtcon ,          & ! SSTs, surface flx parameters
-         sflux_type,                         & ! Surface flux type (0->energetic, 1->kinematic)
+         sflux_type, scooling,               & ! Surface flux type (0->energetic, 1->kinematic), surface cooling rate (Kh-1) (DAN)
          csx    , prndtl ,                   & ! SGS model type, parameters
          ipsflg , itsflg , irsflg,           & ! sounding flags
          hs     , ps     , ts    ,           & ! sounding heights, pressure, temperature
@@ -211,6 +211,11 @@ contains
           call appl_abort(0)
        endif
 
+       ! Surface cooling rate only applicable for isfctyp=2 (DAN)
+       if(isfctyp /= 2 .and. scooling /= 0) then 
+          if (myid == 0) print *, 'Surface cooling rate (scooling) not supported without prescribed surface temperature (isfctype=2)'
+          call appl_abort(0)
+       endif
 
     end if
 

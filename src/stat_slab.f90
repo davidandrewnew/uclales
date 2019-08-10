@@ -14,7 +14,7 @@
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 !
-! Copyright 2015-2017, David A. New
+! Copyright 2015-2018, David A. New
 !----------------------------------------------------------------------------
 
 module modstat_slab
@@ -33,10 +33,10 @@ real, dimension(:,:), pointer :: ut, vt, wt, tt, qt, ut_s, vt_s, wt_s, tt_s, qt_
                                  u2t_press, v2t_press, w2t_press, t2t_press, q2t_press, uwt_press, vwt_press, twt_press, qwt_press, tqt_press, &
                                  u2t_s, v2t_s, w2t_s, t2t_s, q2t_s, uwt_s, vwt_s, twt_s, qwt_s, tqt_s, &
                                  u2t_press_s, v2t_press_s, w2t_press_s, t2t_press_s, q2t_press_s, uwt_press_s, vwt_press_s, twt_press_s, qwt_press_s, tqt_press_s
-real, dimension(:), pointer :: b1, N2, pi11, wfls1, dthldtls1, dqtdtls1, th1, l1, &
+real, dimension(:), pointer :: b1, N2, pi11, wfls1, u01, v01, dthldtls1, dqtdtls1, th1, l1, ac1, &
                                e, et_diss, et_shear, e_s, et_diss_s, et_shear_s, &
                                km, kh, km_s, kh_s, &
-                               b1_s, N2_s, pi11_s, wfls1_s, dthldtls1_s, dqtdtls1_s, th1_s, l1_s, &
+                               b1_s, N2_s, pi11_s, wfls1_s, dthldtls1_s, u01_s, v01_s, dqtdtls1_s, th1_s, l1_s, ac1_s, &
                                b2, bw, thb, lb, w3, tw2, qw2, bw2, t2w, q2w, b2w, &
                                b2_s, bw_s, thb_s, lb_s, w3_s, tw2_s, qw2_s, bw2_s, t2w_s, q2w_s, b2w_s
 real, pointer :: uw_surf1, vw_surf1, tw_surf1, qw_surf1, t_surf1, q_surf1, uw_surf1_s, vw_surf1_s, tw_surf1_s, qw_surf1_s, t_surf1_s, q_surf1_s
@@ -167,8 +167,8 @@ contains
     end if
 
     ! x1_misc
-    nstats_x1_misc = 10
-    if (level >= 1) nstats_x1_misc = nstats_x1_misc + 3
+    nstats_x1_misc = 12
+    if (level >= 1) nstats_x1_misc = nstats_x1_misc + 4
     allocate(x1_misc(nzp,nstats_x1_misc), x1_misc_s(nzp,nstats_x1_misc)) 
     x1_misc(:,:) = 0.
     call create_stat_var(ncid, 'b',         zm_name, my_nf90_real)
@@ -181,10 +181,13 @@ contains
     call create_stat_var(ncid, 'et_diss',   zm_name, my_nf90_real)
     call create_stat_var(ncid, 'km',        zm_name, my_nf90_real)
     call create_stat_var(ncid, 'kh',        zm_name, my_nf90_real)
+    call create_stat_var(ncid, 'ug',        zm_name, my_nf90_real)
+    call create_stat_var(ncid, 'vg',        zm_name, my_nf90_real)
     if (level >= 2) then
        call create_stat_var(ncid, 'dqtdtls',  zt_name, my_nf90_real)
        call create_stat_var(ncid, 'th',       zt_name, my_nf90_real)
        call create_stat_var(ncid, 'l',        zt_name, my_nf90_real)
+       call create_stat_var(ncid, 'ac',       zt_name, my_nf90_real)
     end if
 
     ! x2_misc
@@ -372,10 +375,13 @@ contains
     et_diss   => x1_misc(:,8)
     km        => x1_misc(:,9)
     kh        => x1_misc(:,10)
+    u01       => x1_misc(:,11)
+    v01       => x1_misc(:,12)
     if (level >= 2) then
-       dqtdtls1 => x1_misc(:,11)
-       th1      => x1_misc(:,12)
-       l1       => x1_misc(:,13)
+       dqtdtls1 => x1_misc(:,13)
+       th1      => x1_misc(:,14)
+       l1       => x1_misc(:,15)
+       ac1      => x1_misc(:,16)
     end if
 
     ! x1_misc_s
@@ -389,10 +395,13 @@ contains
     et_diss_s   => x1_misc_s(:,8)
     km_s        => x1_misc_s(:,9)
     kh_s        => x1_misc_s(:,10)
+    u01_s       => x1_misc_s(:,11)
+    v01_s       => x1_misc_s(:,12)
     if (level >= 2) then
-       dqtdtls1_s => x1_misc_s(:,11)
-       th1_s      => x1_misc_s(:,12)
-       l1_s       => x1_misc_s(:,13) 
+       dqtdtls1_s => x1_misc_s(:,13)
+       th1_s      => x1_misc_s(:,14)
+       l1_s       => x1_misc_s(:,15)
+       ac1_s      => x1_misc_s(:,16) 
     end if
 
     ! x2_misc
@@ -455,6 +464,7 @@ contains
        uw_surf1_s = uw_surf1_s + uw_sfc(i,j)
        vw_surf1_s = vw_surf1_s + vw_sfc(i,j)
        tw_surf1_s = tw_surf1_s + wt_sfc(i,j)
+       if (level >= 1) qw_surf1_s = qw_surf1_s + wq_sfc(i,j)
     end do
     end do
     allocate(x_surf_scratch(nstats_x_surf))
@@ -554,7 +564,7 @@ contains
     if (level >= 1) qt_local => xt_local(:,5)
     
     ! Sample first-order statistics
-    xt_local(:,:)  = 0.
+    xt_local(:,:) = 0.
     do j = 3,nyp-2
     do i = 3,nxp-2
        do k = 1,nzp
@@ -736,7 +746,7 @@ contains
   subroutine stat_slab_misc
     use grid, only        : a_up, a_vp, a_wp, a_tp, a_rp, liquid, nzp, nyp, nxp, level, a_theta, vapor, &
                             zm, a_pexnr, zt, a_ut, a_vt, a_wt, a_tt, a_rt, th00, dxi, dyi, a_scr1, pi1, &
-                            wfls, dthldtls, dqtdtls
+                            wfls, dthldtls, dqtdtls, u0, v0
     use modutil_mpi, only : par_sum
     use defs, only        : cp
     implicit none
@@ -754,6 +764,9 @@ contains
           if (level >= 2) then
              th1_s(k) = th1_s(k) + a_theta(k,i,j)
              l1_s(k)  = l1_s(k)  + liquid(k,i,j)
+             if (liquid(k,i,j) > 0) then
+               ac1_s(k) = ac1_s(k) + 1.
+             end if
           end if
        end do
     end do
@@ -767,6 +780,8 @@ contains
     wfls1_s(:)     = wfls(:)
     dthldtls1_s(:) = dthldtls(:)
     dqtdtls1_s(:)  = dqtdtls(:)
+    u01_s(:)       = u0(:)
+    v01_s(:)       = v0(:)
 
     ! Compute N**2. from buoyancy profile temporarily stored in N2
     N2_s(2:nzp-1) = (N2_s(3:nzp) - N2_s(2:nzp-1))/(zm(3:nzp) - zm(2:nzp-1))
@@ -987,8 +1002,6 @@ contains
        if (level >= 1) call write_stat_var(ncid, 'q_surf', q_surf1, irec)
     end if
 
-    write(*,*) time, myid, t_surf1
-
     call write_stat_var(ncid, 'u2', u2, irec)
     call write_stat_var(ncid, 'v2', v2, irec)
     call write_stat_var(ncid, 'w2', w2, irec)
@@ -1036,10 +1049,13 @@ contains
     call write_stat_var(ncid, 'et_diss',   et_diss,   irec)
     call write_stat_var(ncid, 'km',        km,        irec)
     call write_stat_var(ncid, 'kh',        kh,        irec)
+    call write_stat_var(ncid, 'ug',        u01,       irec)
+    call write_stat_var(ncid, 'vg',        v01,       irec)
     if (level >= 2) then
        call write_stat_var(ncid, 'dqtdtls', dqtdtls1, irec)
        call write_stat_var(ncid, 'th',      th1,      irec)
        call write_stat_var(ncid, 'l',       l1,       irec)
+       call write_stat_var(ncid, 'ac',      ac1,      irec)
     end if
 
     call write_stat_var(ncid, 'b2',  b2,  irec)
@@ -1051,6 +1067,7 @@ contains
     call write_stat_var(ncid, 'tw2', tw2, irec)
     if (level >= 1) call write_stat_var(ncid, 'qw2', qw2, irec)
     call write_stat_var(ncid, 'bw2', bw2, irec)
+
 
     ! Reset statistics computation
     n_local  = 0.
