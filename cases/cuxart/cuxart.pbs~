@@ -1,0 +1,10 @@
+#!/bin/bash
+#PBS -q normal
+#PBS -l nodes=4:ppn=32:xe
+#PBS -l walltime=02:00:00
+#PBS -N dcbl_uclales
+#PBS -e $PBS_JOBID.err
+#PBS -o $PBS_JOBID.out
+
+cd /u/sciteam/new/scratch/dcbl
+aprun -n 128 ./uclales

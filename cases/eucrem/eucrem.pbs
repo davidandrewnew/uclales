@@ -1,0 +1,10 @@
+#!/bin/bash
+#PBS -q debug
+#PBS -l nodes=8:ppn=32:xe
+#PBS -l walltime=00:30:00
+#PBS -N eucrem_uclales
+#PBS -e $PBS_JOBID.err
+#PBS -o $PBS_JOBID.out
+
+cd /u/sciteam/new/scratch/eucrem
+aprun -n 256 ./uclales

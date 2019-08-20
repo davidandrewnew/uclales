@@ -1,0 +1,14 @@
+#!/bin/bash
+
+ln -sf ~/uclales/build/uclales uclales
+ln -sf ~/cases/arm/NAMELIST NAMELIST
+ln -sf ~/cases/arm/ls_flux_in ls_flux_in
+ln -sf ~/cases/arm/arm.pbs arm.pbs
+
+rm arm.*.nc
+rm *.err
+rm *.out
+rm *.rst
+rm *.arm.*s
+
+ls -la

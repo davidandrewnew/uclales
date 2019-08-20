@@ -1,0 +1,41 @@
+ &model
+  runtype = 'INITIAL'
+  filprf  = 'dcbl'
+  hfilin  = 'dcbl.rst'
+
+  timmax = 10800.
+
+  nxp = 132
+  nyp = 132
+  nzp = 150
+
+  deltax = 50.
+  deltay = 50.
+  deltaz = 20.
+
+  savg_intvl = 3600.
+  ssam_intvl =   60.
+
+  level = 0
+
+  vmean = 0.
+  umean = 0.
+  th00  = 297.2
+
+  isfctyp = 0
+
+  sflux_type = 1
+
+  dthcon = 0.06
+!  dthcon = 0.03
+
+  zrand = 20
+
+  ps  = 1000.,  3000.,  
+!  ts  = 297.2, 303.05, 
+!  ts  = 297.2, 305.99, 
+  ts  = 297.2,  308.9, 
+  rts =    0,       0, 
+  us  =    0.,     0., 
+  vs  =    0.,     0., 
+ /

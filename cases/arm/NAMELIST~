@@ -1,0 +1,38 @@
+ &model
+  runtype = 'INITIAL'
+  filprf  = 'arm'
+  hfilin  = 'arm.rst'
+
+!  timmax = 52200.
+  timmax = 1200.
+
+  nxp = 132
+  nyp = 132
+  nzp = 128
+
+  deltax = 50.
+  deltay = 50.
+  deltaz = 40.
+
+  savg_intvl = 600.
+  ssam_intvl =  30.
+
+  level = 2
+
+  corflg = .true.
+  cntlat = 36.
+
+  vmean = 0.
+  umean = 10.
+  th00  = 299.
+
+  zrough = 0.035
+
+  ps  =  970.,   50.,  350.,   650.,  700.,  1300., 2500., 5500.,
+  ts  = 299.0, 301.5, 302.5, 303.53, 303.7, 307.13,  314., 343.2,
+  rts =  15.2, 15.17, 14.98,  14.80, 14.70,  13.50,    3.,    3.,
+  us  =   10.,   10.,   10.,    10.,   10.,    10.,   10.,   10.,
+  vs  =    0.,    0.,    0.,     0.,    0.,     0.,    0.,    0.,
+
+  ltimedep=.true.
+ /

@@ -1,0 +1,41 @@
+ &model
+  runtype = 'INITIAL'
+  filprf  = 'cuxart'
+  hfilin  = 'cuxart.rst'
+
+  timmax = 32400.
+
+  nxp = 132
+  nyp = 132
+  nzp = 64
+
+  deltax = 6.25
+  deltay = 6.25
+  deltaz = 6.25
+
+  savg_intvl = 600.
+  ssam_intvl =  60.
+
+  level = 0
+
+  vmean = 0.
+  umean = 8.
+  th00  = 263.5
+
+  isfctyp  = 2
+  sst      = 265.
+  scooling = 0.25
+
+  corflg = .true.
+  cntlat = 73.
+
+  zrough = 0.1  
+
+  zrand = 6.25
+
+  ps  = 1013.2,  100., 400.  
+  ts  =   265.,  265., 268.
+  rts =     0.,    0.,   0. 
+  us  =     8.,    8.,   8. 
+  vs  =     0.,    0.,   0. 
+ /
