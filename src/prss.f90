@@ -39,7 +39,7 @@ contains
 !    use grid, only : nxp, nyp, nzp, dxi, dyi, dzi_m, dzi_t, dt, a_up, a_ut,      &
 !         a_vp, a_vt, a_wp, a_wt, press, a_pexnr, th00, dn0, wsavex, wsavey
      use grid, only : nxp, nyp, nzp, dxi, dyi, dzi_m, dzi_t, th00, dn0, wsavex, wsavey
-         
+
 ! Disabling old statisitcs interface (DAN)
 !    use stat, only : fill_scalar, sflg
     use util, only : ae1mm
@@ -318,7 +318,7 @@ contains
        enddo
       
        call tridiff(ix,n1-1,ix,ak,dk,ck,bk,xk,yk)
-
+       
        do k=2,n1-1
           do l=1,ix
              if (m+yof+l+xof > 2)                &

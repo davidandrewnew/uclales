@@ -45,17 +45,17 @@ contains
   !
   ! create_stat_file
   !
-  subroutine create_stat_file(name, ncid, irec)
+  subroutine create_stat_file(name, ncid, irec, cntlat)
     use netcdf_interface, only : create_file, create_dim, create_unlimited_dim, create_var, &
                                  my_nf90_real, my_nf90_int, write_var
     use mpi_interface, only    : pecount 
     use grid, only             : zt, zm, dn0, dthldtls, dqtdtls, level, wfls, pi0, u0, v0, nzp
     use defs, only             : cp, R, alvl
-    use step, only             : cntlat
     implicit none
 
     character(*), intent(in) :: name
     integer, intent(out)     :: ncid, irec
+    real, intent(in)         :: cntlat
 
     integer              :: i
     integer, allocatable :: rank_values(:), type_values(:)
@@ -114,7 +114,7 @@ contains
     call write_var(ncid, 'cp',   cp_copy)
     call write_var(ncid, 'alvl', alvl_copy)
     call write_var(ncid, 'R',    R_copy)
-    call write_var(ncid, 'cntlat', cntlat)
+    call write_var(ncid, 'cntlat', cntlat_copy)
 
     call write_var(ncid, 'dn0', dn0)
     call write_var(ncid, 'pi0', pi0_by_cp)

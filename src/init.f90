@@ -66,7 +66,7 @@ contains
     use modstat, only          : init_stat                  ! DAN
     use srfc, only             : dthcon, drtcon, sflux_type, scooling, sst0 ! DAN
     use defs, only             : cp, alvl                   ! DAN
-    use step, only             : sst, case_name ! DAN
+    use step, only             : sst, case_name, cntlat ! DAN
     use forc, only             : l1, l1_scratch, lwp_eucrem, F_eucrem ! DAN
     use grid, only             : iradtyp
 
@@ -152,7 +152,7 @@ contains
      call init_netcdf_interface
 
      ! Initialize statistics interface (DAN)
-     call init_stat(time)
+     call init_stat(time, cntlat)
 
     if (lpartic) then
       if(runtype == 'INITIAL') then

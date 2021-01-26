@@ -32,18 +32,18 @@ contains
   !
   ! init_stat
   !
-  subroutine init_stat(time)
+  subroutine init_stat(time, cntlat)
     use grid, only         : nzp, nxp, nyp
     use modstat_slab, only : init_stat_slab
     implicit none
 
-    real, intent(in) :: time
+    real, intent(in) :: time, cntlat
 
     ! Initialize
     nsmp = 0
 
     ! Slab statitics
-    call init_stat_slab
+    call init_stat_slab(cntlat)
 
   end subroutine init_stat
 
@@ -72,6 +72,7 @@ contains
     use util, only : velset
     use prss, only : poisson
     use modstat_slab, only : stat_slab_pressure, stat_slab_tendency
+    use mpi_interface, only : myid
 
     integer, intent(in) :: itype
     real, intent(in)    :: dt

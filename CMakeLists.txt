@@ -72,8 +72,8 @@ else()
   MESSAGE(STATUS "Compiler Flags " ${CMAKE_Fortran_FLAGS} ${CMAKE_Fortran_FLAGS_DEBUG})
 endif()
 
-
-set(INCLUDE_DIRS ${NETCDF_INCLUDE_DIR})
+#set(INCLUDE_DIRS ${NETCDF_INCLUDE_DIR})
+set(INCLUDE_DIRS ${NETCDF_INCLUDE_DIR} ${PNETCDF_INCLUDE_DIR}) # DAN
 
 add_subdirectory(src)
 

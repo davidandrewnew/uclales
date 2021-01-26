@@ -220,7 +220,8 @@ contains
     end if
 
 600 format(//' ',49('-')/,' ',/,'  Initial Experiment: ',A50 &
-         /,'  Final Time:         ',F7.1,' s'              )
+!         /,'  Final Time:         ',F7.1,' s'              )
+         /,'  Final Time:         ',F10.1,' s'              ) ! DAN
 601 format(//' ',49('-')/,' ',/,'  Restart Experiment: ',A50 &
          /,'  Restart File: ',A30,                           &
          /,'  Final Time: ',F10.1,' s'              )

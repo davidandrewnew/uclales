@@ -428,7 +428,7 @@ contains
   !
   subroutine get_fft_twodim(nx,ny,nz,a,wsavex,wsavey,isgn)
 
-    use mpi_interface, only : xshuffle,yshuffle,nxg,nyg,nynzp,nxnzp
+    use mpi_interface, only : xshuffle,yshuffle,nxg,nyg,nynzp,nxnzp, myid
 
     integer, intent(in)    :: nx,ny,nz,isgn
     complex, intent(inout) :: a(nx,ny,nz)

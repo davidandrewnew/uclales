@@ -50,12 +50,14 @@ contains
   !
   ! init_stat_slab
   !
-  subroutine init_stat_slab
+  subroutine init_stat_slab(cntlat)
     use grid, only             : filprf, level, nzp, nxp, nyp, isfctyp
     use modstat_io, only       : create_stat_file, create_stat_var, create_stat_var_2d, zt_name, zm_name, ntypes
     use netcdf_interface, only : my_nf90_real, my_nf90_int, create_var
     use modutil_mpi, only      : par_sum
     implicit none
+
+    real, intent(in) :: cntlat
 
     !
     !
@@ -66,7 +68,7 @@ contains
     n_global = 0
 
     ! Create statistics file
-    call create_stat_file(trim(filprf)//'.stat.slab.nc', ncid, irec)
+    call create_stat_file(trim(filprf)//'.stat.slab.nc', ncid, irec, cntlat)
     call create_stat_var(ncid, 'n', zt_name, my_nf90_int)
 
     ! x_surf
