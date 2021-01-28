@@ -761,7 +761,8 @@ contains
     do j = 3,nyp-2
     do i = 3,nxp-2
        do k = 1,nzp
-          b1_s(k) = b1_s(k) + 0.5*(a_scr1(k,i,j)+a_scr1(k+1,i,j))
+          kp1 = min( k+1, nzp ) 
+          b1_s(k) = b1_s(k) + 0.5*(a_scr1(k,i,j)+a_scr1(kp1,i,j))
           N2_s(k) = N2_s(k) + a_scr1(k,i,j) ! temporary
           if (level >= 2) then
              th1_s(k) = th1_s(k) + a_theta(k,i,j)
@@ -876,18 +877,18 @@ contains
        v2t(:,itype) = f*v2t_s(:,itype) + (1. - f)*v2t(:,itype) + 2.*f*(1. - f)*(v1_s(:) - v1(:))*(vt_s(:,itype) - vt(:,itype))
        w2t(:,itype) = f*w2t_s(:,itype) + (1. - f)*w2t(:,itype) + 2.*f*(1. - f)*(w1_s(:) - w1(:))*(wt_s(:,itype) - wt(:,itype))
        t2t(:,itype) = f*t2t_s(:,itype) + (1. - f)*t2t(:,itype) + 2.*f*(1. - f)*(t1_s(:) - t1(:))*(tt_s(:,itype) - tt(:,itype))
-       uwt(2:nzp-1,itype) = f*uwt_s(2:nzp-2,itype) + (1. - f)*uwt(2:nzp-1,itype) & 
+       uwt(2:nzp-1,itype) = f*uwt_s(2:nzp-1,itype) + (1. - f)*uwt(2:nzp-1,itype) & 
                           + f*(1. - f)*(wt_s(2:nzp-1,itype) - wt(2:nzp-1,itype))&
                             *(0.5*(u1_s(2:nzp-1)+u1_s(3:nzp)) - 0.5*(u1(2:nzp-1)+u1(3:nzp)))
-       vwt(2:nzp-1,itype) = f*vwt_s(2:nzp-2,itype) + (1. - f)*vwt(2:nzp-1,itype) & 
+       vwt(2:nzp-1,itype) = f*vwt_s(2:nzp-1,itype) + (1. - f)*vwt(2:nzp-1,itype) & 
                           + f*(1. - f)*(wt_s(2:nzp-1,itype) - wt(2:nzp-1,itype))&
                             *(0.5*(v1_s(2:nzp-1)+v1_s(3:nzp)) - 0.5*(v1(2:nzp-1)+v1(3:nzp)))
-       twt(2:nzp-1,itype) = f*twt_s(2:nzp-2,itype) + (1. - f)*twt(2:nzp-1,itype) & 
+       twt(2:nzp-1,itype) = f*twt_s(2:nzp-1,itype) + (1. - f)*twt(2:nzp-1,itype) & 
                           + f*(1. - f)*(wt_s(2:nzp-1,itype) - wt(2:nzp-1,itype))&
                             *(0.5*(t1_s(2:nzp-1)+t1_s(3:nzp)) - 0.5*(t1(2:nzp-1)+t1(3:nzp)))
        if (level >= 1) then
           q2t(:,itype) = f*q2t_s(:,itype) + (1. - f)*q2t(:,itype) + 2.*f*(1. - f)*(q1_s(:) - q1(:))*(qt_s(:,itype) - qt(:,itype))
-          qwt(2:nzp-1,itype) = f*qwt_s(2:nzp-2,itype) + (1. - f)*qwt(2:nzp-1,itype) & 
+          qwt(2:nzp-1,itype) = f*qwt_s(2:nzp-1,itype) + (1. - f)*qwt(2:nzp-1,itype) & 
                              + f*(1. - f)*(wt_s(2:nzp-1,itype) - wt(2:nzp-1,itype))&
                                *(0.5*(q1_s(2:nzp-1)+q1_s(3:nzp)) - 0.5*(q1(2:nzp-1)+q1(3:nzp)))
           tqt(:,itype) = f*tqt_s(:,itype) + (1. - f)*tqt(:,itype) + f*(1. - f)*(t1_s(:) - t1(:))*(qt_s(:,itype) - qt(:,itype)) &

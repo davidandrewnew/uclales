@@ -405,7 +405,7 @@ contains
           print *, 'wrong specification for advection scheme'
           call appl_abort(0)
        endif
-       write(*,*) myid, 'baz'
+
        if (sflg) call stat_tendency(3, dt) ! DAN
 
        call ladvect

@@ -44,8 +44,9 @@ contains
        call init_ckd   
 !        randoms = new_RandomNumberSequence(1+myid)
        call init_cldwtr
-       call init_cldice
-       call init_cldgrp
+! DAN
+!       call init_cldice
+!       call init_cldgrp
        Initialized = .True.
     end if
     
