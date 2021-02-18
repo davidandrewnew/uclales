@@ -51,7 +51,7 @@ contains
   ! -------------------------------------------------------------------
   ! subroutine forcings:  calls the appropriate large-scale forcings
   !irina
-  subroutine forcings(time_in, cntlat, sst, div, case_name,time_in_2)
+  subroutine forcings(sflg, dt, time_in, cntlat, sst, div, case_name, time_in_2)
 
 !irina
     use grid, only: nxp, nyp, nzp, zm, zt, dzi_t, dzi_m, dn0, iradtyp, isfctyp, liquid  &
@@ -61,8 +61,11 @@ contains
 
     use mpi_interface, only : myid, appl_abort
     use util, only : get_avg
+    use modstat, only : stat_tendency
 
 !irina
+    real, intent(in) :: dt ! DAN
+    logical, intent(in) :: sflg ! DAN
     real, optional, intent (in) :: time_in, cntlat, sst, div, time_in_2
     real, dimension (nzp):: um,vm
 
@@ -149,6 +152,7 @@ contains
 
 
     end select
+    if (sflg) call stat_tendency(5, dt) ! DAN
 !irina
           !
           ! subsidence
@@ -171,9 +175,11 @@ contains
           enddo
        enddo
     end if
+    if (sflg) call stat_tendency(6, dt) ! DAN
 
 !cgils: Nudging
     call nudge(time_in_2)
+    if (sflg) call stat_tendency(7, dt) ! DAN
 
     if (case_name == 'squall') then
 

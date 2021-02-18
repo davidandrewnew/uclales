@@ -74,6 +74,8 @@ module grid
   real, dimension(:), allocatable :: xt, xm, yt, ym, zt, zm, dzi_t, dzi_m,        &
        u0, v0, pi0, pi1, th0, dn0, rt0, spngt, spngm, wsavex, wsavey,         &
        wfls, dthldtls,dqtdtls                                       !cgils
+
+  integer :: n_local, n_global, n_s_local, n_s_global ! sample count for slab statistics (DAN)
   !
   ! 2D Arrays (surface fluxes)
   !
@@ -85,11 +87,18 @@ module grid
        obl         ! BvS : save obl for faster itertion
   integer, dimension(10) :: prc_lev = -1
   integer :: nv1, nv2, nsmp = 0
+  
+  ! DAN
+  integer :: irec_slab
+  real    :: fsttm
 
   !Malte: variables to restart the land surface
   real, dimension (:,:,:),  allocatable :: a_tsoil, a_phiw,                   &
                             a_sflxd_avn, a_sflxu_avn, a_lflxd_avn, a_lflxu_avn
   real, dimension (:,:),    allocatable :: a_tskin, a_qskin, a_Wl, a_Qnet, a_G0
+
+  ! For new statistics module (DAN)
+  real, dimension(:), allocatable, target :: x_surf, x_surf_s
 
   !
   ! 3D Arrays
@@ -103,6 +112,10 @@ module grid
 
   real, dimension (:,:), allocatable :: svctr
   real, dimension (:)  , allocatable :: ssclr
+
+  ! For new statistics module (DAN)
+  real, dimension(:,:), allocatable, target   :: x1, x2, x1_misc, x2_misc, x1_s, x2_s, x1_misc_s, x2_misc_s
+  real, dimension(:,:,:), allocatable, target :: x1t, x1t_press, x2t, x2t_press, x1t_s, x1t_press_s, x2t_s, x2t_press_s
   !
   ! Named pointers (to 3D arrays)
   !
@@ -708,8 +721,16 @@ contains
     if(lwaterbudget) then
       write(10) cnd_acc, cev_acc
     end if
-    write(10) nv2, nsmp
-    write(10) svctr
+! DAN
+!    write(10) nv2, nsmp
+!    write(10) svctr
+
+    ! DAN
+    write(10) nsmp, n_local, n_global, irec_slab
+    write(10) fsttm
+    write(10) x1, x2, x1_misc, x2_misc, x1_s, x2_s, x1_misc_s, x2_misc_s
+    write(10) x1t, x1t_press, x2t, x2t_press, x1t_s, x1t_press_s, x2t_s, x2t_press_s
+
     close(10)
 
     if (myid == 0 .and. htype < 0) then
@@ -793,9 +814,16 @@ contains
       if(lwaterbudget) then
         read(10) cnd_acc, cev_acc
       end if
-      read(10) nv2, nsmp
-      allocate (svctr(nzp,nv2))
-      read(10) svctr
+! DAN
+!      read(10) nv2, nsmp
+!      allocate (svctr(nzp,nv2))
+!      read(10) svctr
+
+      ! DAN
+      read(10) nsmp, n_local, n_global, irec_slab
+      read(10) fsttm
+      read(10) x1, x2, x1_misc, x2_misc, x1_s, x2_s, x1_misc_s, x2_misc_s
+      read(10) x1t, x1t_press, x2t, x2t_press, x1t_s, x1t_press_s, x2t_s, x2t_press_s
 
        close(10)
        !

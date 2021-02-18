@@ -36,6 +36,7 @@ PRIVATE
 PUBLIC :: nudge,lnudge,tnudgefac, qfloor, zfloor, znudgemin, znudgeplus, nudge_bound, lnudge_bound
 SAVE
   real, dimension(:,:), allocatable :: tnudge,unudge,vnudge,wnudge,thlnudge,qtnudge
+  real, dimension(:,:), allocatable :: tuvnudge ! DAN
   real, dimension(:)  , allocatable :: timenudge
   real :: tnudgefac = 1., qfloor = -1.,  zfloor = 1200., znudgemin = -1., znudgeplus = -1.
   logical :: lnudge,lunudge,lvnudge,lwnudge,lthlnudge,lqtnudge
@@ -66,9 +67,12 @@ contains
     real :: highheight,highqtnudge,highthlnudge,highunudge,highvnudge,highwnudge,hightnudge
     real :: lowheight,lowqtnudge,lowthlnudge,lowunudge,lowvnudge,lowwnudge,lowtnudge
     real :: fac
+    real :: hightuvnudge, lowtuvnudge ! DAN
     allocate(tnudge(nzp,ntnudge),unudge(nzp,ntnudge),vnudge(nzp,ntnudge),wnudge(nzp,ntnudge),thlnudge(nzp,ntnudge),qtnudge(nzp,ntnudge))
     allocate(timenudge(0:ntnudge), height(nzp))
+    allocate(tuvnudge(nzp,ntnudge)) ! DAN
     tnudge = 0
+    tuvnudge = 0 ! DAN
     unudge=0
     vnudge=0
     wnudge=0
@@ -91,9 +95,13 @@ contains
           if (ierr < 0) exit readloop
 
         end do
-        write(6,*) ' height    t_nudge    u_nudge    v_nudge    w_nudge    thl_nudge    qt_nudge'
-        read (ifinput,*)  lowheight , lowtnudge ,  lowunudge , lowvnudge , lowwnudge , lowthlnudge, lowqtnudge
-        read (ifinput,*)  highheight , hightnudge ,  highunudge , highvnudge , highwnudge , highthlnudge, highqtnudge
+! DAN
+!        write(6,*) ' height    t_nudge    u_nudge    v_nudge    w_nudge    thl_nudge    qt_nudge'
+!        read (ifinput,*)  lowheight , lowtnudge ,  lowunudge , lowvnudge , lowwnudge , lowthlnudge, lowqtnudge
+!        read (ifinput,*)  highheight , hightnudge ,  highunudge , highvnudge , highwnudge , highthlnudge, highqtnudge
+        write(6,*) ' height    t_nudge    tuv_nudge    u_nudge    v_nudge    w_nudge    thl_nudge    qt_nudge'
+        read (ifinput,*)  lowheight , lowtnudge , lowtuvnudge , lowunudge , lowvnudge , lowwnudge , lowthlnudge, lowqtnudge
+        read (ifinput,*)  highheight , hightnudge , hightuvnudge , highunudge , highvnudge , highwnudge , highthlnudge, highqtnudge
         do  k=2,nzp-1
 	  ! Christopher: bug fix (analog in modtimedep.f90)
           !if (highheight<zt(k)) then
@@ -110,15 +118,19 @@ contains
 	    if (highheight>=zt(k)) exit
             lowheight = highheight
             lowtnudge = hightnudge
+            lowtuvnudge = hightuvnudge ! DAN
             lowunudge = highunudge
             lowvnudge = highvnudge
             lowwnudge = highwnudge
             lowthlnudge= highthlnudge
             lowqtnudge=highqtnudge
-            read (ifinput,*)  highheight , hightnudge ,  highunudge , highvnudge , highwnudge , highthlnudge, highqtnudge
+! DAN
+!            read (ifinput,*)  highheight , hightnudge ,  highunudge , highvnudge , highwnudge , highthlnudge, highqtnudge
+            read (ifinput,*)  highheight , hightnudge , hightuvnudge , highunudge , highvnudge , highwnudge , highthlnudge, highqtnudge
           end do
           fac = (highheight-zt(k))/(highheight - lowheight)
           tnudge(k,t) = fac*lowtnudge + (1-fac)*hightnudge
+          tuvnudge(k,t) = fac*lowtuvnudge + (1.-fac)*hightuvnudge ! DAN
           unudge(k,t) = fac*lowunudge + (1-fac)*highunudge
           vnudge(k,t) = fac*lowvnudge + (1-fac)*highvnudge
           wnudge(k,t) = fac*lowwnudge + (1-fac)*highwnudge
@@ -131,6 +143,7 @@ contains
                   zt (k), &
                   height (k), &
                   tnudge (k,t), &
+                  tuvnudge(k,t), & ! DAN
                   unudge (k,t), &
                   vnudge (k,t), &
                   wnudge (k,t), &
@@ -200,7 +213,9 @@ contains
     do j=3,nyp-2
     do i=3,nxp-2
     do k=2,nzp-1
-      currtnudge = max(dt,tnudge(k,t)*dtp+tnudge(k,t+1)*dtm)
+! DAN
+!      currtnudge = max(dt,tnudge(k,t)*dtp+tnudge(k,t+1)*dtm)
+      currtnudge = max(dt,tuvnudge(k,t)*dtp+tuvnudge(k,t+1)*dtm)
       if(lunudge  ) a_ut(k,i,j)=a_ut(k,i,j)-&
           (uav(k)-(unudge  (k,t)*dtp+unudge  (k,t+1)*dtm))/currtnudge
       if(lvnudge  ) a_vt(k,i,j)=a_vt(k,i,j)-&

@@ -24,26 +24,24 @@ module modstat
   real    :: ssam_intvl = 30.   ! statistical sampling interval
   real    :: savg_intvl = 1800. ! statistical averaging interval
 
-  real    :: fsttm
-  integer :: nsmp
-
 contains
 
   !
   ! init_stat
   !
-  subroutine init_stat(time, cntlat)
-    use grid, only         : nzp, nxp, nyp
+  subroutine init_stat(time, runtype, cntlat)
+    use grid, only         : nzp, nxp, nyp, nsmp
     use modstat_slab, only : init_stat_slab
     implicit none
 
-    real, intent(in) :: time, cntlat
+    real, intent(in)              :: time, cntlat
+    character (len=7), intent(in) :: runtype
 
     ! Initialize
     nsmp = 0
 
     ! Slab statitics
-    call init_stat_slab(cntlat)
+    call init_stat_slab(runtype, cntlat)
 
   end subroutine init_stat
 
@@ -51,6 +49,7 @@ contains
   ! sample_stat
   !
   subroutine sample_stat(time)
+    use grid, only : nsmp, fsttm
     use modstat_slab, only : sample_stat_slab
     implicit none
     
@@ -92,6 +91,7 @@ contains
   ! update_stat
   !
   subroutine update_stat
+    use grid, only : nsmp
     use modstat_slab, only : update_stat_slab
     implicit none
 
@@ -107,6 +107,7 @@ contains
   ! write_stat
   !
   subroutine write_stat(time)
+    use grid, only          : nsmp, fsttm
     use mpi_interface, only : appl_abort
     use modstat_slab, only  : write_stat_slab
     implicit none

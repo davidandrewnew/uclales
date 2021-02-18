@@ -80,6 +80,12 @@ contains
          w_ano(nzp,nxp-4,nyp-4)   
     integer :: k, i, j
 
+     ! Initialize NetCDF interface (DAN)
+     call init_netcdf_interface
+
+     ! Initialize statistics interface (DAN)
+     call init_stat(time, runtype, cntlat)
+
     if (runtype == 'INITIAL') then
        time=0.
        call random_init
@@ -147,12 +153,6 @@ contains
         lwp_eucrem(:) = 0.
         F_eucrem(:)   = 0.
      end if
-
-     ! Initialize NetCDF interface (DAN)
-     call init_netcdf_interface
-
-     ! Initialize statistics interface (DAN)
-     call init_stat(time, cntlat)
 
     if (lpartic) then
       if(runtype == 'INITIAL') then

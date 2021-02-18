@@ -174,6 +174,25 @@ module netcdf_interface
     end subroutine create_file
 
     !
+    ! open_file
+    !
+    subroutine open_file(name, ncid)
+      use pnetcdf, only : nf90mpi_open, nf90_write
+      use mpi
+      implicit none
+
+      character(len=*), intent(in) :: name
+      integer, intent(out)         :: ncid
+
+      integer :: iret
+
+      ! Close file
+      iret = nf90mpi_open(MPI_COMM_WORLD, trim(name), nf90_write, MPI_INFO_NULL, ncid)
+      call handle_error(iret, 'In nf90mpi_open: ')
+
+    end subroutine open_file
+
+    !
     ! close_file
     !
     subroutine close_file(ncid)

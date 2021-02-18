@@ -20,7 +20,7 @@
 module modstat_io
   implicit none
 
-  integer, parameter :: ntypes = 8
+  integer, parameter :: ntypes = 11
 
   character(*), parameter :: time_name = 'time'
   character(*), parameter :: rank_name = 'rank'
@@ -49,7 +49,7 @@ contains
     use netcdf_interface, only : create_file, create_dim, create_unlimited_dim, create_var, &
                                  my_nf90_real, my_nf90_int, write_var
     use mpi_interface, only    : pecount 
-    use grid, only             : zt, zm, dn0, dthldtls, dqtdtls, level, wfls, pi0, u0, v0, nzp
+    use grid, only             : zt, zm, dn0, dthldtls, dqtdtls, level, wfls, pi0, pi1, u0, v0, nzp
     use defs, only             : cp, R, alvl
     implicit none
 
@@ -59,7 +59,7 @@ contains
 
     integer              :: i
     integer, allocatable :: rank_values(:), type_values(:)
-    real, allocatable    :: pi0_by_cp(:)
+    real, allocatable    :: exner(:)
     real                 :: cp_copy, alvl_copy, R_copy, cntlat_copy
 
     ! Create file
@@ -94,8 +94,8 @@ contains
     call create_var(ncid=ncid, var_name='R',    type=my_nf90_real)
     call create_var(ncid=ncid, var_name='cntlat', type=my_nf90_real)
 
-    call create_var(ncid, 'dn0',    my_nf90_real, (/zt_name/))
-    call create_var(ncid, 'pi0',    my_nf90_real, (/zt_name/))
+    call create_var(ncid, 'dn0',  my_nf90_real, (/zt_name/))
+    call create_var(ncid, 'pi0',  my_nf90_real, (/zt_name/))
 
     ! Create variable for first and last sample times
     call create_var(ncid, 'nsmp',  my_nf90_int, (/time_name/))
@@ -107,8 +107,8 @@ contains
     alvl_copy   = alvl
     R_copy      = R
     cntlat_copy = cntlat
-    allocate(pi0_by_cp(nzp))
-    pi0_by_cp(:) = pi0(:)/cp
+    allocate(exner(nzp))
+    exner(:) = pi0(:)/cp
 
     ! Write parameters
     call write_var(ncid, 'cp',   cp_copy)
@@ -117,7 +117,7 @@ contains
     call write_var(ncid, 'cntlat', cntlat_copy)
 
     call write_var(ncid, 'dn0', dn0)
-    call write_var(ncid, 'pi0', pi0_by_cp)
+    call write_var(ncid, 'pi0', exner)
 
     ! Initialize record index
     irec = 0

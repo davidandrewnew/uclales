@@ -417,23 +417,25 @@ contains
           else
              call thermo(level)
           end if
-          call forcings(xtime,cntlat,sst,div,case_name,time)
+! DAN
+!          call forcings(xtime,cntlat,sst,div,case_name,time)
+          call forcings(sflg,dt,xtime,cntlat,sst,div,case_name,time)
           call micro(level,istp)
        end if
-       if (sflg) call stat_tendency(5, dt) ! DAN
+       if (sflg) call stat_tendency(8, dt) ! DAN
 
        call corlos
-       if (sflg) call stat_tendency(6, dt) ! DAN
+       if (sflg) call stat_tendency(9, dt) ! DAN
 
        call buoyancy
        if (sflg) then
           call stat_slab_misc
-          call stat_tendency(7, dt) ! DAN
+          call stat_tendency(10, dt) ! DAN
        end if
 
        call sponge
        call decay
-       if (sflg) call stat_tendency(8, dt) ! DAN
+       if (sflg) call stat_tendency(11, dt) ! DAN
 
        call update (nstep)
 ! DAN
